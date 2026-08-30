@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: nkys-tube-pro
+    runtime: node
+    plan: free
+    buildCommand: echo "no build step"
+    startCommand: node server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"

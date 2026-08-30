@@ -1,0 +1,12 @@
+{
+  "name": "nkys-tube-pro",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NKYS Tube Pro — single-file YouTube-style viewer (stream via yt.omada.cafe)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": { "node": ">=18" }
+}
