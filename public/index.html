@@ -10,6 +10,13 @@
 <meta property="og:type" content="website" />
 <meta name="twitter:card" content="summary_large_image" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='22' y='5' rx='6' fill='%23ff0033'/%3E%3Cpath d='M13 11l8 5-8 5z' fill='%23fff'/%3E%3C/svg%3E" />
+<!-- 動画表示を高速化するための事前接続 -->
+<link rel="preconnect" href="https://yt.omada.cafe" crossorigin />
+<link rel="dns-prefetch" href="https://yt.omada.cafe" />
+<link rel="preconnect" href="https://i.ytimg.com" crossorigin />
+<link rel="dns-prefetch" href="https://i.ytimg.com" />
+<link rel="dns-prefetch" href="https://www.youtube-nocookie.com" />
+<link rel="preconnect" href="https://inv.nadeko.net" crossorigin />
 <style>
 :root{
   --bg:#0f0f0f; --bg-elev:#181818; --bg-hover:#272727; --chip:#272727; --chip-on:#f1f1f1;
@@ -170,7 +177,8 @@ dialog h3{margin:0 0 12px}
 :root{
   --bg:#0f0f0f; --bg-elev:#212121; --bg-hover:#272727; --chip:#272727; --chip-on:#f1f1f1;
   --fg:#f1f1f1; --fg-dim:#aaa; --line:#303030; --brand:#ff0000; --blue:#3ea6ff;
-  --radius:0px;
+  --radius:14px;
+  --radius-sm:8px;
   --ease:cubic-bezier(.2,.8,.2,1);
   --font:"Roboto","Noto Sans JP","YouTube Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
@@ -179,15 +187,19 @@ dialog h3{margin:0 0 12px}
   --fg:#0f0f0f; --fg-dim:#606060; --line:#e5e5e5;
 }
 
-/* ---- すべてのボタン・入力・チップ・サムネを四角に ---- */
-button, .icobtn, .chip, .pill, .pillgroup, .searchbox input, .searchbox button,
-.row input[type=text], .row textarea, .row select, dialog, #toast, #desc,
-.thumb, .rel-item .thumb, .short video, .dur, .badge, .snav, .subrow, .skel{
-  border-radius:0 !important;
+/* ---- 少し丸みを持たせた現行 YouTube 風の見た目 ---- */
+button, .icobtn, .searchbox input, .searchbox button,
+.row input[type=text], .row textarea, .row select, dialog, #toast, #desc{
+  border-radius:var(--radius-sm) !important;
 }
-.icobtn{width:40px;height:40px}
-.searchbox input{border-right:0}
-.searchbox button{width:64px}
+.thumb, .rel-item .thumb, .short video, .skel{ border-radius:var(--radius) !important; }
+.dur, .badge{ border-radius:6px !important; }
+.chip{ border-radius:999px !important; }
+.pill, .pillgroup{ border-radius:999px !important; }
+.snav, .subrow{ border-radius:999px !important; }
+.icobtn{width:40px;height:40px;border-radius:50% !important}
+.searchbox input{border-right:0;border-radius:999px 0 0 999px !important}
+.searchbox button{width:64px;border-radius:0 999px 999px 0 !important}
 
 /* アバター等の丸は YouTube 同様に維持 */
 .avatar,.meta img,.owner img,.comment img,.subrow img,.spinner{border-radius:50% !important}
@@ -257,12 +269,34 @@ dialog::backdrop{animation:nk-fade .2s var(--ease) both}
 #toast{transition:opacity .25s var(--ease),transform .25s var(--ease)}
 
 /* ---- プレイヤー ---- */
-#playerWrap{border-radius:0;transition:box-shadow .25s var(--ease)}
-video{border-radius:0}
+#playerWrap{border-radius:var(--radius);transition:box-shadow .25s var(--ease)}
+#playerWrap.theater{border-radius:0}
+video,#playerWrap iframe{border-radius:0}
 
 @media (prefers-reduced-motion:reduce){
   *{animation:none !important;transition:none !important}
 }
+
+/* ---- 再生モード切替（ストリーム / Nocookie） ---- */
+.modegroup{display:flex;background:var(--chip);border-radius:999px;overflow:hidden}
+.modegroup .pill{border-radius:0;background:transparent;height:36px}
+.modegroup .pill.on{background:var(--chip-on);color:var(--bg)}
+#playerWrap iframe{width:100%;height:100%;display:block}
+
+/* ---- チャンネルページ（YouTube 風） ---- */
+.chBanner{width:100%;aspect-ratio:6.23/1;object-fit:cover;border-radius:var(--radius);background:linear-gradient(120deg,var(--bg-hover),var(--bg-elev));display:block}
+.chHead{display:flex;align-items:flex-end;gap:20px;margin-top:-36px;padding:0 8px;flex-wrap:wrap}
+.chHead .chAvatar{width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid var(--bg);background:var(--bg-hover);flex:none}
+.chHead .chInfo{flex:1;min-width:220px;padding-bottom:4px}
+.chName{font-size:24px;font-weight:700;display:flex;align-items:center;gap:6px}
+.chName svg{width:18px;height:18px;fill:var(--fg-dim)}
+.chSubline{font-size:14px;color:var(--fg-dim);margin-top:4px}
+.chTabs{display:flex;gap:8px;margin:20px 0 4px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.chTabs::-webkit-scrollbar{display:none}
+.chTab{padding:14px 12px;font-size:14px;font-weight:600;color:var(--fg-dim);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;transition:color .15s var(--ease),border-color .15s var(--ease)}
+.chTab:hover{color:var(--fg)}
+.chTab.on{color:var(--fg);border-color:var(--fg)}
+.chAbout{background:var(--chip);border-radius:var(--radius);padding:16px;margin-top:16px;font-size:14px;line-height:1.6;white-space:pre-wrap}
 </style>
 </head>
 <body>
@@ -322,8 +356,10 @@ video{border-radius:0}
       <option value="480">480p</option><option value="360">360p</option>
     </select>
   </div>
+  <div class="row"><label><input type="checkbox" id="setNocookieDefault" /> 再生ページを既定で Nocookie 埋め込みにする</label></div>
   <div class="row" style="font-size:12px;color:var(--fg-dim)">
-    ストリーム: <b style="color:var(--brand)">yt.omada.cafe 優先</b> ／ メタ情報・検索・コメント・急上昇は Invidious インスタンスへ役割分担。
+    ストリーム: <b style="color:var(--brand)">yt.omada.cafe 優先</b>（local=true で確実に再生）／ 失敗時は Nocookie 埋め込みに自動フォールバック。
+    メタ情報・検索・コメント・急上昇は Invidious インスタンスへ役割分担。
   </div>
   <div class="row" id="healthBox" style="font-size:12px;color:var(--fg-dim)"></div>
   <div class="row" style="justify-content:flex-end"><button class="pill solid" onclick="dlgSettings.close()">閉じる</button></div>
@@ -356,7 +392,7 @@ const LS = {
   set(k, v) { try { localStorage.setItem("nkys_" + k, JSON.stringify(v)); } catch (_) {} },
 };
 const S = {
-  settings: Object.assign({ proxy: false, adaptive: false, autoplay: true, quality: "auto", theme: "dark" }, LS.get("settings", {})),
+  settings: Object.assign({ proxy: false, adaptive: false, autoplay: true, quality: "auto", theme: "dark", playerMode: "stream" }, LS.get("settings", {})),
   subs: LS.get("subs", []),
   history: LS.get("history", []),
   liked: LS.get("liked", []),
@@ -452,20 +488,25 @@ function api(role, path, opt) {
   return p;
 }
 
-/* ストリームは yt.omada.cafe を最優先。失敗時のみ他へフォールバック */
+/* ストリームは yt.omada.cafe を最優先。失敗時のみ他へフォールバック
+   local=true を付けることで、omada.cafe 自身がストリーム URL を仲介する形になり、
+   googlevideo 直リンクの CORS/帯域制限に左右されず確実に再生できる。 */
 async function getVideo(id, signal) {
   const path = "/api/v1/videos/" + encodeURIComponent(id);
   let primary = null;
   try {
-    primary = await fetchJson(STREAM_PRIMARY, path, signal, 9000);
+    primary = await fetchJson(STREAM_PRIMARY, path + "?local=true", signal, 6000);
     if (hasStreams(primary)) return primary;
   } catch (_) {}
+  if (!primary) {
+    try { primary = await fetchJson(STREAM_PRIMARY, path, signal, 5000); if (hasStreams(primary)) return primary; } catch (_) {}
+  }
   const alt = await race(POOLS.video.filter((b) => b !== STREAM_PRIMARY), path, signal);
   if (primary && !hasStreams(alt)) return primary;
   if (primary) { alt.__metaOnly = false; }
   return alt || primary;
 }
-const hasStreams = (v) => !!(v && ((v.formatStreams && v.formatStreams.length) || (v.adaptiveFormats && v.adaptiveFormats.length)));
+const hasStreams = (v) => !!(v && ((v.formatStreams && v.formatStreams.length) || (v.adaptiveFormats && v.adaptiveFormats.length) || v.hlsUrl));
 
 /* ---------------- images ---------------- */
 function thumbUrl(v) {
@@ -576,68 +617,99 @@ async function pageSearch(q) {
 let hls = null;
 async function pageWatch(id) {
   setChips(null);
-  view().innerHTML = '<div class="spinner"></div>';
-  let v;
-  try { v = await getVideo(id, nav.abort.signal); }
-  catch (e) { if (!isAbort(e)) view().innerHTML = '<div class="empty">動画を読み込めませんでした。</div>'; return; }
+  if (!id) { view().innerHTML = '<div class="empty">動画が見つかりません</div>'; return; }
 
-  const streams = pickStreams(v);
-  const subbed = S.subs.some((s) => s.id === v.authorId);
+  /* 通信は即座に開始し、表示は後回しにしない（体感速度優先） */
+  const dataPromise = getVideo(id, nav.abort.signal);
+  const guessThumb = "https://i.ytimg.com/vi/" + encodeURIComponent(id) + "/hqdefault.jpg";
+  const mode0 = S.settings.playerMode === "nocookie" ? "nocookie" : "stream";
+
   const wrap = el("div", "watch");
   wrap.innerHTML = `
     <div>
-      <div id="playerWrap">
-        <video id="vp" controls playsinline ${S.settings.autoplay ? "autoplay" : ""} poster="${esc(thumbUrl(v))}"></video>
-      </div>
-      <h1 id="vtitle">${esc(v.title)}</h1>
+      <div id="playerWrap"></div>
+      <h1 id="vtitle" class="skel" style="height:24px;width:70%;margin:12px 0 0;border-radius:6px"></h1>
       <div class="owner">
-        <img src="${esc(authorImg(v))}" alt="">
-        <div>
-          <div class="oname" id="goCh">${esc(v.author || "")}</div>
-          <div class="osub">${fmtNum(v.subCountText ? 0 : v.subCount || 0)}${v.subCount ? "人の登録者" : ""}</div>
-        </div>
-        <button class="pill ${subbed ? "" : "solid"}" id="btnSub">${subbed ? "登録済み" : "チャンネル登録"}</button>
+        <div class="skel" style="width:40px;height:40px;border-radius:50%"></div>
+        <div style="flex:1"><div class="skel" style="height:14px;width:140px;margin-bottom:6px"></div><div class="skel" style="height:12px;width:90px"></div></div>
         <div class="actions">
-          <div class="pillgroup">
-            <button class="pill" id="btnLike"><svg viewBox="0 0 24 24"><path d="M18.8 9H14V4.6L11 12v8h7l3-8.6zM3 12h4v8H3z"/></svg>${fmtNum(v.likeCount || 0)}</button>
-            <div class="sep"></div>
-            <button class="pill"><svg viewBox="0 0 24 24" style="transform:rotate(180deg)"><path d="M18.8 9H14V4.6L11 12v8h7l3-8.6zM3 12h4v8H3z"/></svg></button>
+          <div class="modegroup" id="modeGroup">
+            <button class="pill" id="btnModeStream" title="独自プレーヤーで再生（高画質選択可）">ストリーム</button>
+            <button class="pill" id="btnModeNocookie" title="YouTube (nocookie) 埋め込みで再生">Nocookie</button>
           </div>
-          <button class="pill" id="btnShare"><svg viewBox="0 0 24 24"><path d="M15 5.6L16.4 4 22 9.6 16.4 15 15 13.5l3-3H12a7 7 0 00-7 7v1H3v-1a9 9 0 019-9h6z"/></svg>共有</button>
-          <button class="pill" id="btnLater"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 100 18 9 9 0 000-18zm.5 5H11v6l4.7 2.9.8-1.3-4-2.4z"/></svg>後で見る</button>
-          <button class="pill" id="btnSave">保存</button>
           <select class="pill" id="qsel" title="画質" style="padding:0 10px"></select>
           <button class="pill" id="btnTheater" title="シアターモード">▭</button>
           <button class="pill" id="btnPip" title="ミニプレーヤー">⧉</button>
         </div>
       </div>
-      <div id="desc"><b>${fmtNum(v.viewCount)}回視聴・${esc(v.publishedText || ago(v.published))}</b>${esc(v.description || "")}</div>
-      <div class="sechead"><span>${fmtNum(v.commentCount || 0)} 件のコメント</span></div>
+      <div id="desc" class="skel" style="height:60px;margin-top:16px"></div>
+      <div class="sechead" id="commentHead"><span>コメント</span></div>
       <div id="comments"><div class="spinner"></div></div>
     </div>
-    <aside id="side"></aside>`;
+    <aside id="side"><div class="spinner"></div></aside>`;
   view().innerHTML = ""; view().appendChild(wrap);
 
-  /* player */
-  const vp = $("#vp");
+  /* まずポスター画像だけ即表示し、体感の読み込み速度を上げる */
+  mountPlayer(mode0, { poster: guessThumb });
+
+  let v;
+  try { v = await dataPromise; }
+  catch (e) {
+    if (!isAbort(e)) $("#playerWrap").innerHTML = '<div class="empty" style="color:#fff">動画を読み込めませんでした。</div>';
+    return;
+  }
+  if (nav.abort.signal.aborted) return;
+
+  const streams = pickStreams(v);
+  const subbed = S.subs.some((s) => s.id === v.authorId);
+
+  $("#vtitle").outerHTML = `<h1 id="vtitle">${esc(v.title)}</h1>`;
+  $(".owner").innerHTML = `
+    <img src="${esc(authorImg(v))}" alt="">
+    <div>
+      <div class="oname" id="goCh">${esc(v.author || "")}</div>
+      <div class="osub">${fmtNum(v.subCountText ? 0 : v.subCount || 0)}${v.subCount ? "人の登録者" : ""}</div>
+    </div>
+    <button class="pill ${subbed ? "" : "solid"}" id="btnSub">${subbed ? "登録済み" : "チャンネル登録"}</button>
+    <div class="actions">
+      <div class="pillgroup">
+        <button class="pill" id="btnLike"><svg viewBox="0 0 24 24"><path d="M18.8 9H14V4.6L11 12v8h7l3-8.6zM3 12h4v8H3z"/></svg>${fmtNum(v.likeCount || 0)}</button>
+        <div class="sep"></div>
+        <button class="pill"><svg viewBox="0 0 24 24" style="transform:rotate(180deg)"><path d="M18.8 9H14V4.6L11 12v8h7l3-8.6zM3 12h4v8H3z"/></svg></button>
+      </div>
+      <button class="pill" id="btnShare"><svg viewBox="0 0 24 24"><path d="M15 5.6L16.4 4 22 9.6 16.4 15 15 13.5l3-3H12a7 7 0 00-7 7v1H3v-1a9 9 0 019-9h6z"/></svg>共有</button>
+      <button class="pill" id="btnLater"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 100 18 9 9 0 000-18zm.5 5H11v6l4.7 2.9.8-1.3-4-2.4z"/></svg>後で見る</button>
+      <button class="pill" id="btnSave">保存</button>
+      <div class="modegroup" id="modeGroup">
+        <button class="pill" id="btnModeStream" title="独自プレーヤーで再生（高画質選択可）">ストリーム</button>
+        <button class="pill" id="btnModeNocookie" title="YouTube (nocookie) 埋め込みで再生">Nocookie</button>
+      </div>
+      <select class="pill" id="qsel" title="画質" style="padding:0 10px"></select>
+      <button class="pill" id="btnTheater" title="シアターモード">▭</button>
+      <button class="pill" id="btnPip" title="ミニプレーヤー">⧉</button>
+    </div>`;
+  $("#desc").outerHTML = `<div id="desc"><b>${fmtNum(v.viewCount)}回視聴・${esc(v.publishedText || ago(v.published))}</b>${esc(v.description || "")}</div>`;
+  $("#commentHead").innerHTML = `<span>${fmtNum(v.commentCount || 0)} 件のコメント</span>`;
+
+  window.__nkysStreams = streams;
+  window.__nkysVideo = v;
   const qsel = $("#qsel");
   streams.forEach((s, i) => qsel.appendChild(new Option(s.label, i)));
-  if (!streams.length) {
-    qsel.appendChild(new Option("再生不可", 0));
-    $("#playerWrap").insertAdjacentHTML("beforeend",
-      '<div class="empty" style="position:absolute;inset:0;display:grid;place-items:center;color:#fff">ストリームを取得できませんでした</div>');
-  } else {
+  if (!streams.length) qsel.appendChild(new Option("再生不可", 0));
+  else {
     let start = 0;
     const pref = S.settings.quality;
     if (pref !== "auto") { const i = streams.findIndex((s) => s.label.startsWith(pref)); if (i >= 0) start = i; }
     else if (S.settings.adaptive) { const i = streams.findIndex((s) => s.adaptive); if (i >= 0) start = i; }
     qsel.value = String(start);
-    setSrc(vp, streams[start]);
-    qsel.onchange = () => { const t = vp.currentTime, p = !vp.paused; setSrc(vp, streams[+qsel.value]); vp.currentTime = t; if (p) vp.play(); };
   }
-  vp.addEventListener("ended", () => { const n = $("#side .rel-item"); if (S.settings.autoplay && n) n.click(); });
-  addHistory(v);
 
+  /* 現在のモードでプレーヤーを本再生に切り替え */
+  const curMode = $("#playerWrap").dataset.mode || mode0;
+  mountPlayer(curMode, { id, v, streams, autoFallbackTried: false });
+  wireModeToggle(id, v);
+
+  addHistory(v);
   $("#desc").onclick = (e) => e.currentTarget.classList.toggle("open");
   $("#goCh").onclick = () => v.authorId && go("/channel?c=" + v.authorId);
   $("#btnSub").onclick = () => {
@@ -656,11 +728,82 @@ async function pageWatch(id) {
   };
   $("#btnSave").onclick = () => savePlaylistPrompt(v);
   $("#btnTheater").onclick = () => { $("#playerWrap").classList.toggle("theater"); $("#main").classList.toggle("wide"); };
-  $("#btnPip").onclick = () => vp.requestPictureInPicture && vp.requestPictureInPicture().catch(() => {});
-  keyBindings(vp);
+  $("#btnPip").onclick = () => {
+    const vp = $("#vp");
+    if (vp && vp.requestPictureInPicture) vp.requestPictureInPicture().catch(() => {});
+    else toast("Nocookie 再生中はミニプレーヤーを利用できません");
+  };
 
   loadSide(v);
   loadComments(id);
+}
+
+/* プレーヤーの描画: mode = "stream"(独自プレーヤー) | "nocookie"(YouTube nocookie 埋め込み)
+   opt.poster だけの初期呼び出し（データ未取得時）にも対応 */
+function mountPlayer(mode, opt) {
+  opt = opt || {};
+  const box = $("#playerWrap");
+  box.dataset.mode = mode;
+  box.innerHTML = "";
+  if (mode === "nocookie" && opt.id) {
+    document.onkeydown = null;
+    const f = el("iframe");
+    f.id = "ytFrame"; f.allowFullscreen = true;
+    f.allow = "autoplay; encrypted-media; picture-in-picture";
+    f.referrerPolicy = "strict-origin-when-cross-origin";
+    f.src = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(opt.id) +
+      "?autoplay=" + (S.settings.autoplay ? 1 : 0) + "&rel=0&modestbranding=1";
+    box.appendChild(f);
+    return;
+  }
+  const vp = el("video");
+  vp.id = "vp"; vp.controls = true; vp.playsInline = true; vp.preload = "auto";
+  if (S.settings.autoplay) vp.autoplay = true;
+  if (opt.poster) vp.poster = opt.poster;
+  box.appendChild(vp);
+  if (opt.streams && opt.streams.length) {
+    let start = 0;
+    const sel = $("#qsel");
+    if (sel && sel.value) start = +sel.value;
+    setSrc(vp, opt.streams[start]);
+    vp.addEventListener("error", () => {
+      if (opt.autoFallbackTried) return;
+      opt.autoFallbackTried = true;
+      toast("ストリーム再生に失敗したため Nocookie 再生に切り替えました");
+      $("#btnModeNocookie") && $("#btnModeNocookie").click();
+    }, { once: true });
+  } else if (opt.v) {
+    box.insertAdjacentHTML("beforeend",
+      '<div class="empty" style="position:absolute;inset:0;display:grid;place-items:center;color:#fff">ストリームを取得できませんでした</div>');
+  }
+  vp.addEventListener("ended", () => { const n = $("#side .rel-item"); if (S.settings.autoplay && n) n.click(); });
+  keyBindings(vp);
+}
+
+function wireModeToggle(id, v) {
+  const bS = $("#btnModeStream"), bN = $("#btnModeNocookie"), qsel = $("#qsel");
+  const sync = () => {
+    const m = $("#playerWrap").dataset.mode;
+    bS.classList.toggle("on", m !== "nocookie");
+    bN.classList.toggle("on", m === "nocookie");
+    if (qsel) qsel.style.display = m === "nocookie" ? "none" : "";
+  };
+  bS.onclick = () => {
+    S.settings.playerMode = "stream"; saveSettings();
+    mountPlayer("stream", { id, v, streams: window.__nkysStreams, autoFallbackTried: false });
+    sync();
+  };
+  bN.onclick = () => {
+    S.settings.playerMode = "nocookie"; saveSettings();
+    mountPlayer("nocookie", { id, v });
+    sync();
+  };
+  qsel && (qsel.onchange = () => {
+    const vp = $("#vp"); if (!vp) return;
+    const t = vp.currentTime, p = !vp.paused;
+    setSrc(vp, window.__nkysStreams[+qsel.value]); vp.currentTime = t; if (p) vp.play();
+  });
+  sync();
 }
 
 function setSrc(vp, s) {
@@ -735,29 +878,64 @@ function keyBindings(vp) {
 async function pageChannel(cid) {
   setChips(null);
   view().innerHTML = '<div class="spinner"></div>';
+  let ch, vidsRaw;
   try {
-    const [ch, vids] = await Promise.all([
+    [ch, vidsRaw] = await Promise.all([
       api("channel", "/api/v1/channels/" + cid),
       api("channel", "/api/v1/channels/" + cid + "/videos").catch(() => []),
     ]);
-    const subbed = S.subs.some((s) => s.id === cid);
-    view().innerHTML = "";
-    const head = el("div");
-    head.innerHTML =
-      (ch.authorBanners?.length ? '<img src="' + esc(abs(ch.authorBanners[0].url)) + '" style="width:100%;border-radius:12px;margin-top:16px" alt="">' : "") +
-      '<div class="owner" style="margin:24px 0">' +
-        '<img src="' + esc(abs((ch.authorThumbnails || []).slice(-1)[0]?.url)) + '" style="width:80px;height:80px" alt="">' +
-        '<div><div style="font-size:24px;font-weight:700">' + esc(ch.author) + "</div>" +
-        '<div class="osub">' + fmtNum(ch.subCount) + "人の登録者・" + fmtNum(ch.totalViews || 0) + "回視聴</div></div>" +
-        '<button class="pill ' + (subbed ? "" : "solid") + '" id="chSub">' + (subbed ? "登録済み" : "チャンネル登録") + "</button></div>";
-    view().appendChild(head);
-    $("#chSub").onclick = () => {
-      const i = S.subs.findIndex((s) => s.id === cid);
-      if (i >= 0) S.subs.splice(i, 1); else S.subs.push({ id: cid, name: ch.author, img: abs((ch.authorThumbnails || []).slice(-1)[0]?.url) });
-      LS.set("subs", S.subs); renderSubs(); pageChannel(cid);
-    };
-    view().appendChild(renderGrid(vids.videos || vids || ch.latestVideos || []));
-  } catch (e) { if (!isAbort(e)) view().innerHTML = '<div class="empty">チャンネルを取得できませんでした</div>'; }
+  } catch (e) { if (!isAbort(e)) view().innerHTML = '<div class="empty">チャンネルを取得できませんでした</div>'; return; }
+
+  const subbed = S.subs.some((s) => s.id === cid);
+  const avatar = abs((ch.authorThumbnails || []).slice(-1)[0]?.url);
+  const banner = ch.authorBanners?.length ? abs(ch.authorBanners[0].url) : "";
+  const allVideos = vidsRaw.videos || vidsRaw || ch.latestVideos || [];
+  const shorts = allVideos.filter((x) => (x.lengthSeconds || 0) > 0 && x.lengthSeconds <= 90);
+  const verifiedIcon = ch.authorVerified
+    ? '<svg viewBox="0 0 24 24"><path d="M12 1l2.6 2.2 3.4-.4 1 3.3 3 1.7-1 3.4 1 3.4-3 1.7-1 3.3-3.4-.4L12 23l-2.6-2.2-3.4.4-1-3.3-3-1.7 1-3.4-1-3.4 3-1.7 1-3.3 3.4.4z"/></svg>'
+    : "";
+
+  view().innerHTML = "";
+  const head = el("div");
+  head.innerHTML =
+    (banner ? '<img class="chBanner" src="' + esc(banner) + '" alt="">' : '<div class="chBanner"></div>') +
+    '<div class="chHead">' +
+      '<img class="chAvatar" src="' + esc(avatar) + '" alt="">' +
+      '<div class="chInfo">' +
+        '<div class="chName">' + esc(ch.author) + verifiedIcon + '</div>' +
+        '<div class="chSubline">' + (ch.authorId ? '@' + esc(ch.authorId) + ' ・ ' : '') +
+          fmtNum(ch.subCount) + '人の登録者・' + fmtNum(allVideos.length) + '本の動画</div>' +
+      '</div>' +
+      '<button class="pill ' + (subbed ? "" : "solid") + '" id="chSub">' + (subbed ? "登録済み" : "チャンネル登録") + '</button>' +
+    '</div>' +
+    '<div class="chTabs">' +
+      '<div class="chTab on" data-tab="videos">動画</div>' +
+      '<div class="chTab" data-tab="shorts">ショート</div>' +
+      '<div class="chTab" data-tab="about">概要</div>' +
+    '</div>' +
+    '<div id="chBody"></div>';
+  view().appendChild(head);
+
+  $("#chSub").onclick = () => {
+    const i = S.subs.findIndex((s) => s.id === cid);
+    if (i >= 0) S.subs.splice(i, 1); else S.subs.push({ id: cid, name: ch.author, img: avatar });
+    LS.set("subs", S.subs); renderSubs(); pageChannel(cid);
+  };
+
+  const body = $("#chBody");
+  const showTab = (tab) => {
+    document.querySelectorAll(".chTab").forEach((t) => t.classList.toggle("on", t.dataset.tab === tab));
+    body.innerHTML = "";
+    if (tab === "videos") body.appendChild(renderGrid(allVideos));
+    else if (tab === "shorts") body.appendChild(renderGrid(shorts));
+    else {
+      const about = el("div", "chAbout");
+      about.textContent = ch.description || "概要は登録されていません。";
+      body.appendChild(about);
+    }
+  };
+  document.querySelectorAll(".chTab").forEach((t) => (t.onclick = () => showTab(t.dataset.tab)));
+  showTab("videos");
 }
 
 /* ---- shorts ---- */
@@ -902,6 +1080,7 @@ $("#btnSettings").onclick = () => {
   $("#setAdaptive").checked = S.settings.adaptive;
   $("#setAutoplay").checked = S.settings.autoplay;
   $("#setQuality").value = S.settings.quality;
+  $("#setNocookieDefault").checked = S.settings.playerMode === "nocookie";
   $("#healthBox").textContent = "計測済みインスタンス: " +
     Object.entries(S.health).sort((a, b) => a[1].ms - b[1].ms).slice(0, 4)
       .map(([b, r]) => b.replace(/^https:\/\//, "") + " " + Math.round(r.ms) + "ms").join(" / ");
@@ -911,6 +1090,7 @@ $("#setProxy").onchange = (e) => { S.settings.proxy = USE_PROXY = e.target.check
 $("#setAdaptive").onchange = (e) => { S.settings.adaptive = e.target.checked; saveSettings(); };
 $("#setAutoplay").onchange = (e) => { S.settings.autoplay = e.target.checked; saveSettings(); };
 $("#setQuality").onchange = (e) => { S.settings.quality = e.target.value; saveSettings(); };
+$("#setNocookieDefault").onchange = (e) => { S.settings.playerMode = e.target.checked ? "nocookie" : "stream"; saveSettings(); };
 
 /* サーバープロキシが利用できるなら自動で有効化（安定性向上） */
 (async () => {
