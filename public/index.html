@@ -425,6 +425,58 @@ body.theater #side{padding:0 24px}
 
 /* --- 画質バッジ --- */
 #qsel option{background:var(--bg-elev)}
+
+/* --- ライブバッジ --- */
+.dur.live{background:var(--brand)!important;color:#fff;display:inline-flex;align-items:center;gap:4px;font-weight:600}
+.dur.live::before{content:"";width:6px;height:6px;border-radius:50%;background:#fff}
+.livechip{display:inline-flex;align-items:center;gap:6px;background:var(--brand);color:#fff;font-size:12px;font-weight:700;
+  padding:3px 8px;border-radius:6px;margin-left:8px}
+.livechip::before{content:"";width:7px;height:7px;border-radius:50%;background:#fff;animation:nk-blink 1.4s infinite}
+@keyframes nk-blink{50%{opacity:.25}}
+
+/* --- ショート (YouTube 準拠) --- */
+#shortsView{scrollbar-width:none}
+#shortsView::-webkit-scrollbar{display:none}
+.short{position:relative;display:grid;place-items:center}
+.short .sh-stage{position:relative;height:min(92%,calc((100vh - var(--hdr)) * .94));aspect-ratio:9/16;width:auto;max-width:94vw;
+  border-radius:var(--radius);overflow:hidden;background:#000}
+.short .sh-stage iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;pointer-events:none}
+.short .sh-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.8)}
+.short .sh-overlay{z-index:3}
+.short .sh-side{z-index:4}
+.short .sh-tapzone{z-index:2}
+.short .sh-actwrap{display:flex;flex-direction:column;align-items:center;gap:2px}
+.short .sh-cnt{font-size:11px;color:#fff;text-align:center;margin-top:0}
+.short .sh-sub{margin-left:6px;background:#fff;color:#0f0f0f;border:0;border-radius:999px;height:28px;padding:0 12px;
+  font-size:13px;font-weight:600;cursor:pointer}
+.short .sh-owner .sh-name{text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.short .sh-title,.short .sh-views{text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.short .sh-mute{position:absolute;top:12px;right:12px;z-index:5;width:40px;height:40px;border:0;border-radius:50%;
+  background:rgba(0,0,0,.55);color:#fff;display:grid;place-items:center;cursor:pointer}
+.short .sh-mute svg{width:22px;height:22px;fill:currentColor}
+.short .sh-open{position:absolute;top:12px;left:12px;z-index:5;background:rgba(0,0,0,.55);color:#fff;border:0;
+  border-radius:999px;height:32px;padding:0 12px;font-size:12px;cursor:pointer}
+.shortsEnd{height:60px;display:grid;place-items:center;color:var(--fg-dim);font-size:13px}
+
+/* --- 再生リスト --- */
+.plpanel{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:16px}
+.plpanel .plhead{padding:12px 14px;background:var(--bg-elev);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.plpanel .plhead b{font-size:15px}
+.plpanel .plhead span{font-size:12px;color:var(--fg-dim)}
+.plbody{max-height:340px;overflow-y:auto}
+.plitem{display:flex;gap:10px;align-items:center;padding:6px 10px;cursor:pointer;font-size:13px}
+.plitem:hover{background:var(--bg-hover)}
+.plitem.on{background:var(--bg-hover)}
+.plitem .plidx{width:18px;text-align:center;color:var(--fg-dim);font-size:12px;flex:none}
+.plitem img{width:88px;aspect-ratio:16/9;object-fit:cover;border-radius:6px;flex:none;background:var(--bg-hover)}
+.plitem .plt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35}
+.plcard{display:flex;gap:16px;align-items:center;background:var(--chip);border-radius:var(--radius);padding:12px;margin-bottom:16px;cursor:pointer}
+.plcard img{width:200px;aspect-ratio:16/9;object-fit:cover;border-radius:10px;background:var(--bg-hover)}
+.plcard .plmeta{flex:1;min-width:0}
+.plcard .plname{font-size:18px;font-weight:700}
+.plcard .plcount{font-size:13px;color:var(--fg-dim);margin-top:4px}
+@media(max-width:640px){.plcard{flex-direction:column;align-items:stretch}.plcard img{width:100%}}
+
 </style>
 </head>
 <body>
@@ -523,6 +575,13 @@ body.theater #side{padding:0 24px}
   </div>
   <div class="row" id="healthBox" style="font-size:12px;color:var(--fg-dim)"></div>
   <div class="row" style="justify-content:flex-end"><button class="pill solid" onclick="dlgSettings.close()">閉じる</button></div>
+</dialog>
+
+<dialog id="dlgSave">
+  <h3>再生リストに保存</h3>
+  <div id="saveList"></div>
+  <div class="row"><input type="text" id="newPlName" placeholder="新しい再生リスト名" /><button class="pill" id="btnNewPl">作成</button></div>
+  <div class="row" style="justify-content:flex-end"><button class="pill solid" onclick="dlgSave.close()">完了</button></div>
 </dialog>
 
 <script>
@@ -733,6 +792,7 @@ function normPipedVideo(it) {
     viewCount: it.views > 0 ? it.views : 0,
     publishedText: it.uploadedDate || "",
     isShort: !!it.isShort || (it.duration > 0 && it.duration <= 180 && /shorts/i.test(it.url || "")),
+    liveNow: !!it.isShort ? false : (it.duration <= 0 && it.views > 0),
   };
 }
 function normPipedChannel(it) {
@@ -748,6 +808,9 @@ function normPipedChannel(it) {
   };
 }
 const isShortVid = (v) => !!v.isShort || (v.lengthSeconds > 0 && v.lengthSeconds <= 180);
+/* ライブ判定: Invidious は liveNow / Piped は duration<=0 かつ views あり */
+const isLive = (v) => !!(v && (v.liveNow || v.isLive || v.live || v.type === "livestream" ||
+  (v.hlsUrl && !(v.lengthSeconds > 0)) || (v.lengthSeconds === 0 && v.publishedText === "LIVE")));
 
 /* ---------------- router ---------------- */
 const nav = { abort: null };
@@ -816,7 +879,9 @@ function loading(n) {
 function videoCard(v, mode) {
   const id = v.videoId || v.id;
   const card = el("div", (mode === "list" ? "list-item" : mode === "rel" ? "rel-item" : "card"));
-  const dur = v.lengthSeconds ? '<span class="dur">' + fmtDur(v.lengthSeconds) + "</span>" : "";
+  const live = isLive(v);
+  const dur = live ? '<span class="dur live">ライブ</span>'
+    : (v.lengthSeconds ? '<span class="dur">' + fmtDur(v.lengthSeconds) + "</span>" : "");
   const av = mode ? "" : '<img loading="lazy" decoding="async" width="36" height="36" src="' + esc(authorImg(v) || "https://i.ytimg.com/vi/" + id + "/default.jpg") + '" alt="">';
   card.innerHTML =
     '<div class="thumb"><img loading="lazy" decoding="async" fetchpriority="high" width="480" height="270" src="' +
@@ -1062,7 +1127,7 @@ async function pageWatch(id) {
   const streams = pickStreams(v);
   const subbed = S.subs.some((s) => s.id === v.authorId);
 
-  $("#vtitle").outerHTML = `<h1 id="vtitle">${esc(v.title)}</h1>`;
+  $("#vtitle").outerHTML = `<h1 id="vtitle">${esc(v.title)}${isLive(v) ? '<span class="livechip">ライブ</span>' : ""}</h1>`;
   $(".owner").innerHTML = `
     <img src="${esc(authorImg(v))}" alt="">
     <div>
@@ -1126,7 +1191,15 @@ async function pageWatch(id) {
     navigator.clipboard.writeText(url); toast("リンクをコピーしました");
   };
   $("#btnSave").onclick = () => savePlaylistPrompt(v);
-  $("#btnTheater").onclick = () => { $("#playerWrap").classList.toggle("theater"); $("#main").classList.toggle("wide"); };
+  $("#btnTheater").onclick = () => {
+    const on = !document.body.classList.contains("theater");
+    document.body.classList.toggle("theater", on);
+    $("#playerWrap").classList.toggle("theater", on);
+    $("#main").classList.toggle("wide", on);
+    $("#sidebar").classList.toggle("mini", on);
+    $("#btnTheater").classList.toggle("on", on);
+    toast(on ? "シアターモード" : "通常表示");
+  };
   $("#btnPip").onclick = () => {
     const vp = $("#vp");
     if (vp && vp.requestPictureInPicture) vp.requestPictureInPicture().catch(() => {});
@@ -1175,7 +1248,10 @@ function mountPlayer(mode, opt) {
     box.insertAdjacentHTML("beforeend",
       '<div class="empty" style="position:absolute;inset:0;display:grid;place-items:center;color:#fff">ストリームを取得できませんでした</div>');
   }
-  vp.addEventListener("ended", () => { const n = $("#side .rel-item"); if (S.settings.autoplay && n) n.click(); });
+  vp.addEventListener("ended", () => {
+    if (playlistNext()) return;
+    const n = $("#side .rel-item"); if (S.settings.autoplay && n) n.click();
+  });
   keyBindings(vp);
 }
 
@@ -1235,6 +1311,7 @@ async function loadSide(v) {
   }
   side.innerHTML = "";
   (rec || []).slice(0, 30).forEach((r) => side.appendChild(videoCard(r, "rel")));
+  renderPlaylistPanel(side, v.videoId || v.id);
 }
 
 async function loadComments(id) {
@@ -1269,6 +1346,7 @@ function keyBindings(vp) {
     else if (k === "i") $("#btnPip")?.click();
     else if (k === ">") vp.playbackRate = Math.min(2, vp.playbackRate + .25);
     else if (k === "<") vp.playbackRate = Math.max(.25, vp.playbackRate - .25);
+    else if (k === "escape" && document.body.classList.contains("theater")) $("#btnTheater")?.click();
     else if (/^[0-9]$/.test(k) && vp.duration) vp.currentTime = vp.duration * (+k / 10);
   };
 }
@@ -1337,33 +1415,192 @@ async function pageChannel(cid) {
   showTab("videos");
 }
 
-/* ---- shorts ---- */
-async function pageShorts() {
+/* ---- shorts (YouTube 準拠 UI / Nocookie 再生) ---- */
+const SHORT_QUERIES = ["#shorts", "shorts 面白い", "shorts 音楽", "shorts ゲーム", "shorts 料理",
+  "shorts アニメ", "shorts スポーツ", "shorts 猫", "shorts ダンス", "shorts 芸人"];
+let shortsMuted = true;
+const shortsSeen = new Set();
+
+async function fetchShorts(queries, signal) {
+  const res = await Promise.allSettled(queries.map((q) =>
+    api("search", "/api/v1/search?q=" + encodeURIComponent(q) + "&type=video&region=JP", { signal })));
+  const out = [];
+  res.forEach((r) => {
+    if (r.status !== "fulfilled") return;
+    (r.value || []).forEach((v) => {
+      const id = v.videoId || v.id;
+      if (!id || shortsSeen.has(id)) return;
+      if (!(v.lengthSeconds > 0 && v.lengthSeconds <= 180)) return;
+      shortsSeen.add(id);
+      out.push(v);
+    });
+  });
+  /* Piped からも補完してさらに件数を増やす */
+  if (out.length < 20) {
+    try {
+      const d = await pipedGet("/search?q=" + encodeURIComponent("shorts") + "&filter=videos", signal);
+      (d.items || []).map(normPipedVideo).forEach((v) => {
+        if (!v.videoId || shortsSeen.has(v.videoId)) return;
+        if (!(v.lengthSeconds > 0 && v.lengthSeconds <= 180)) return;
+        shortsSeen.add(v.videoId); out.push(v);
+      });
+    } catch (_) {}
+  }
+  for (let i = out.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [out[i], out[j]] = [out[j], out[i]]; }
+  return out;
+}
+
+const ICO = {
+  like: '<svg viewBox="0 0 24 24"><path d="M18.77 11h-4.23l1.52-4.94A1.54 1.54 0 0014.6 4a1.53 1.53 0 00-1.29.7L9 11H3v10h14.6a2 2 0 001.94-1.51l1.4-6A2 2 0 0018.77 11z"/></svg>',
+  dislike: '<svg viewBox="0 0 24 24" style="transform:rotate(180deg)"><path d="M18.77 11h-4.23l1.52-4.94A1.54 1.54 0 0014.6 4a1.53 1.53 0 00-1.29.7L9 11H3v10h14.6a2 2 0 001.94-1.51l1.4-6A2 2 0 0018.77 11z"/></svg>',
+  comment: '<svg viewBox="0 0 24 24"><path d="M12 4a8 8 0 100 16h8v-8a8 8 0 00-8-8zM2 12a10 10 0 1110 10H2V12z"/></svg>',
+  share: '<svg viewBox="0 0 24 24"><path d="M15 5.6L16.4 4 22 9.6 16.4 15 15 13.5l3-3H12a7 7 0 00-7 7v1H3v-1a9 9 0 019-9h6z"/></svg>',
+  save: '<svg viewBox="0 0 24 24"><path d="M22 7H2v1h20V7zm-9 5H2v1h11v-1zm0 5H2v1h11v-1zm3-3.5v7l6-3.5-6-3.5z"/></svg>',
+  mute: '<svg viewBox="0 0 24 24"><path d="M15 5v14l-5-4H6V9h4l5-4zm3.5 3.5l-1 1L19 11l-1.5 1.5 1 1L20 12l1.5 1.5 1-1L21 11l1.5-1.5-1-1L20 10l-1.5-1.5z"/></svg>',
+  unmute: '<svg viewBox="0 0 24 24"><path d="M15 5v14l-5-4H6V9h4l5-4zm3 2.2a6 6 0 010 9.6l-.8-1a4.8 4.8 0 000-7.6l.8-1z"/></svg>',
+};
+
+function shortItem(v) {
+  const id = v.videoId || v.id;
+  const s = el("div", "short");
+  s.dataset.id = id;
+  const liked = S.liked.some((x) => x.videoId === id);
+  s.innerHTML =
+    '<div class="sh-stage">' +
+      '<img class="sh-poster" src="' + esc(shortThumbUrl(v)) + '" onerror="this.src=\'' + esc(thumbUrl(v, "m")) + '\'" alt="">' +
+      '<div class="sh-tapzone"></div>' +
+      '<button class="sh-mute" aria-label="音声">' + ICO.unmute + '</button>' +
+      '<button class="sh-open">動画ページ</button>' +
+      '<div class="sh-overlay">' +
+        '<div class="sh-owner">' +
+          '<img src="' + esc(authorImg(v) || "https://i.ytimg.com/vi/" + id + "/default.jpg") + '" alt="">' +
+          '<span class="sh-name">' + esc(v.author || "") + "</span>" +
+          '<button class="sh-sub">登録</button>' +
+        "</div>" +
+        '<div class="sh-title">' + esc(v.title) + "</div>" +
+        '<div class="sh-views">' + (v.viewCount ? fmtNum(v.viewCount) + "回視聴" : esc(v.publishedText || "")) + "</div>" +
+      "</div>" +
+      '<div class="sh-side">' +
+        '<div class="sh-actwrap"><button class="sh-act sh-like' + (liked ? " on" : "") + '">' + ICO.like + '</button><span class="sh-cnt">' + fmtNum(v.likeCount || 0) + "</span></div>" +
+        '<div class="sh-actwrap"><button class="sh-act sh-dis">' + ICO.dislike + '</button><span class="sh-cnt">低評価</span></div>' +
+        '<div class="sh-actwrap"><button class="sh-act sh-com">' + ICO.comment + '</button><span class="sh-cnt">コメント</span></div>' +
+        '<div class="sh-actwrap"><button class="sh-act sh-share">' + ICO.share + '</button><span class="sh-cnt">共有</span></div>' +
+        '<div class="sh-actwrap"><button class="sh-act sh-save">' + ICO.save + '</button><span class="sh-cnt">保存</span></div>' +
+      "</div>" +
+    "</div>";
+
+  const stage = s.querySelector(".sh-stage");
+  const post = (func, args) => {
+    const f = stage.querySelector("iframe");
+    if (!f || !f.contentWindow) return;
+    f.contentWindow.postMessage(JSON.stringify({ event: "command", func, args: args || [] }), "*");
+  };
+  s._post = post;
+  s._syncMute = () => {
+    s.querySelector(".sh-mute").innerHTML = shortsMuted ? ICO.mute : ICO.unmute;
+    post(shortsMuted ? "mute" : "unMute");
+  };
+  s.querySelector(".sh-mute").onclick = (e) => {
+    e.stopPropagation();
+    shortsMuted = !shortsMuted;
+    document.querySelectorAll(".short").forEach((n) => n._syncMute && n._syncMute());
+  };
+  let playing = true;
+  s.querySelector(".sh-tapzone").onclick = () => { playing = !playing; post(playing ? "playVideo" : "pauseVideo"); };
+  s.querySelector(".sh-open").onclick = (e) => { e.stopPropagation(); go("/watch?v=" + id); };
+  s.querySelector(".sh-like").onclick = (e) => {
+    e.stopPropagation(); toggleList("liked", v);
+    e.currentTarget.classList.toggle("on"); toast("高く評価した動画を更新しました");
+  };
+  s.querySelector(".sh-dis").onclick = (e) => { e.stopPropagation(); toast("低評価しました"); };
+  s.querySelector(".sh-com").onclick = (e) => { e.stopPropagation(); go("/watch?v=" + id); };
+  s.querySelector(".sh-share").onclick = async (e) => {
+    e.stopPropagation();
+    const url = location.origin + "/shorts?v=" + id;
+    if (navigator.share) { try { await navigator.share({ title: v.title, url }); return; } catch (_) {} }
+    navigator.clipboard.writeText(url); toast("リンクをコピーしました");
+  };
+  s.querySelector(".sh-save").onclick = (e) => { e.stopPropagation(); savePlaylistPrompt(v); };
+  s.querySelector(".sh-sub").onclick = (e) => {
+    e.stopPropagation();
+    if (!v.authorId) return toast("チャンネル情報がありません");
+    const i = S.subs.findIndex((x) => x.id === v.authorId);
+    if (i >= 0) { S.subs.splice(i, 1); e.target.textContent = "登録"; }
+    else { S.subs.push({ id: v.authorId, name: v.author, img: authorImg(v) }); e.target.textContent = "登録済み"; }
+    LS.set("subs", S.subs); renderSubs();
+  };
+  s.querySelector(".sh-owner img").onclick = (e) => { e.stopPropagation(); v.authorId && go("/channel?c=" + v.authorId); };
+
+  s._mount = () => {
+    if (stage.querySelector("iframe")) { post("playVideo"); s._syncMute(); return; }
+    const f = el("iframe");
+    f.allow = "autoplay; encrypted-media; picture-in-picture";
+    f.referrerPolicy = "strict-origin-when-cross-origin";
+    f.setAttribute("allowfullscreen", "");
+    /* ショートは常に youtube-nocookie で再生 */
+    f.src = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(id) +
+      "?autoplay=1&mute=" + (shortsMuted ? 1 : 0) + "&controls=0&loop=1&playlist=" + encodeURIComponent(id) +
+      "&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&enablejsapi=1&origin=" + encodeURIComponent(location.origin);
+    stage.insertBefore(f, stage.querySelector(".sh-tapzone"));
+    playing = true;
+    setTimeout(() => s._syncMute(), 1200);
+  };
+  s._unmount = () => {
+    const f = stage.querySelector("iframe");
+    if (f) f.remove();
+  };
+  return s;
+}
+
+async function pageShorts(startId) {
   setChips(null);
+  shortsSeen.clear();
   view().innerHTML = '<div class="spinner"></div>';
-  try {
-    const d = await api("search", "/api/v1/search?q=%23shorts&type=video&region=JP");
-    const list = (d || []).filter((v) => (v.lengthSeconds || 0) <= 90).slice(0, 15);
-    const box = el("div"); box.id = "shortsView";
-    view().innerHTML = ""; view().appendChild(box);
-    for (const v of list) {
-      const s = el("div", "short");
-      s.innerHTML = '<video playsinline loop controls poster="' + esc(thumbUrl(v)) + '"></video>';
-      box.appendChild(s);
-      s.dataset.id = v.videoId;
-    }
-    const io = new IntersectionObserver(async (es) => {
-      for (const e of es) {
-        const vid = e.target.querySelector("video");
-        if (!e.isIntersecting) { vid.pause(); continue; }
-        if (!vid.src) {
-          try { const d2 = await getVideo(e.target.dataset.id); const st = pickStreams(d2); if (st[st.length - 1]) vid.src = px(st[st.length - 1].url); } catch (_) {}
-        }
-        vid.play().catch(() => {});
-      }
-    }, { threshold: .6 });
-    box.querySelectorAll(".short").forEach((n) => io.observe(n));
-  } catch (_) { view().innerHTML = '<div class="empty">ショートを取得できませんでした</div>'; }
+  const signal = nav.abort.signal;
+  let list;
+  try { list = await fetchShorts(SHORT_QUERIES, signal); }
+  catch (e) { if (isAbort(e)) return; view().innerHTML = '<div class="empty">ショートを取得できませんでした</div>'; return; }
+  if (signal.aborted) return;
+  if (!list.length) { view().innerHTML = '<div class="empty">ショートが見つかりませんでした</div>'; return; }
+
+  if (startId) {
+    const i = list.findIndex((v) => (v.videoId || v.id) === startId);
+    if (i > 0) list.unshift(list.splice(i, 1)[0]);
+    else if (i < 0) list.unshift({ videoId: startId, title: "", author: "" });
+  }
+
+  const box = el("div"); box.id = "shortsView";
+  view().innerHTML = ""; view().appendChild(box);
+  const end = el("div", "shortsEnd", "読み込み中…");
+
+  const io = new IntersectionObserver((es) => {
+    es.forEach((e) => {
+      if (e.isIntersecting) e.target._mount && e.target._mount();
+      else e.target._unmount && e.target._unmount();
+    });
+  }, { threshold: .55 });
+
+  const append = (arr) => arr.forEach((v) => { const n = shortItem(v); box.appendChild(n); io.observe(n); });
+  append(list);
+  box.appendChild(end);
+
+  /* 無限スクロールでさらに読み込み、表示量を増やす */
+  let busy = false, round = 0;
+  const more = new IntersectionObserver(async (es) => {
+    if (!es.some((e) => e.isIntersecting) || busy) return;
+    busy = true; round++;
+    try {
+      const qs = SHORT_QUERIES.slice().sort(() => Math.random() - .5).slice(0, 4)
+        .map((q) => q + (round > 1 ? " " + round : ""));
+      const nxt = await fetchShorts(qs, signal);
+      if (!nxt.length) { end.textContent = "これ以上のショートはありません"; more.disconnect(); }
+      else { box.removeChild(end); append(nxt); box.appendChild(end); }
+    } catch (_) { end.textContent = "読み込みに失敗しました"; }
+    finally { busy = false; }
+  }, { root: box, rootMargin: "800px" });
+  more.observe(end);
+
+  signal.addEventListener("abort", () => { io.disconnect(); more.disconnect(); }, { once: true });
 }
 
 /* ---- library pages ---- */
@@ -1385,29 +1622,122 @@ async function pageSubs() {
 }
 
 /* ---- playlists ---- */
+let curList = null, curListIndex = 0;
+
 function savePlaylistPrompt(v) {
-  const names = Object.keys(S.playlists);
-  const name = prompt("再生リスト名（既存: " + (names.join(", ") || "なし") + "）", names[0] || "お気に入り");
-  if (!name) return;
-  (S.playlists[name] = S.playlists[name] || []);
-  if (!S.playlists[name].some((x) => x.videoId === v.videoId)) S.playlists[name].push(slim(v));
-  LS.set("playlists", S.playlists);
-  toast("「" + name + "」に保存しました");
+  const dlg = $("#dlgSave"), box = $("#saveList");
+  const draw = () => {
+    box.innerHTML = "";
+    const names = Object.keys(S.playlists);
+    if (!names.length) box.appendChild(el("div", "row", '<span style="color:var(--fg-dim)">再生リストがありません。下で作成してください。</span>'));
+    names.forEach((n) => {
+      const has = (S.playlists[n] || []).some((x) => x.videoId === (v.videoId || v.id));
+      const row = el("label", "row");
+      row.innerHTML = '<input type="checkbox" ' + (has ? "checked" : "") + '> <span>' + esc(n) + '</span> <span class="badge">' + (S.playlists[n] || []).length + "本</span>";
+      row.querySelector("input").onchange = (e) => {
+        const arr = (S.playlists[n] = S.playlists[n] || []);
+        const i = arr.findIndex((x) => x.videoId === (v.videoId || v.id));
+        if (e.target.checked) { if (i < 0) arr.push(slim(v)); } else if (i >= 0) arr.splice(i, 1);
+        LS.set("playlists", S.playlists);
+        toast("「" + n + "」を更新しました");
+        draw();
+      };
+      box.appendChild(row);
+    });
+  };
+  draw();
+  $("#btnNewPl").onclick = () => {
+    const name = $("#newPlName").value.trim();
+    if (!name) return;
+    S.playlists[name] = S.playlists[name] || [];
+    if (!S.playlists[name].some((x) => x.videoId === (v.videoId || v.id))) S.playlists[name].push(slim(v));
+    LS.set("playlists", S.playlists);
+    $("#newPlName").value = "";
+    toast("「" + name + "」に保存しました");
+    draw();
+  };
+  dlg.showModal();
 }
+
+const plThumb = (v) => "https://i.ytimg.com/vi/" + (v.videoId || v.id) + "/mqdefault.jpg";
+
 function pagePlaylists() {
   setChips(null);
   view().innerHTML = "";
   const names = Object.keys(S.playlists);
-  if (!names.length) return view().appendChild(el("div", "empty", "再生リストがありません"));
+  view().appendChild(el("div", "sechead", "再生リスト"));
+  if (!names.length) return view().appendChild(el("div", "empty", "再生リストがありません。動画の「保存」から作成できます。"));
   names.forEach((n) => {
-    const h = el("div", "sechead");
-    h.innerHTML = esc(n) + ' <span class="badge">' + S.playlists[n].length + "本</span>";
+    const items = S.playlists[n] || [];
+    const card = el("div", "plcard");
+    card.innerHTML =
+      '<img src="' + esc(items[0] ? plThumb(items[0]) : "") + '" alt="">' +
+      '<div class="plmeta"><div class="plname">' + esc(n) + "</div>" +
+      '<div class="plcount">' + items.length + "本の動画</div></div>";
+    const play = el("button", "pill solid", "すべて再生");
+    play.onclick = (e) => { e.stopPropagation(); if (items.length) go("/watch?v=" + items[0].videoId + "&list=" + encodeURIComponent(n) + "&index=0"); };
     const del = el("button", "pill", "削除");
-    del.onclick = () => { delete S.playlists[n]; LS.set("playlists", S.playlists); pagePlaylists(); };
-    h.appendChild(del);
-    view().appendChild(h);
-    view().appendChild(renderGrid(S.playlists[n]));
+    del.onclick = (e) => { e.stopPropagation(); if (confirm("「" + n + "」を削除しますか？")) { delete S.playlists[n]; LS.set("playlists", S.playlists); pagePlaylists(); } };
+    const acts = el("div", "actions"); acts.appendChild(play); acts.appendChild(del);
+    card.appendChild(acts);
+    card.onclick = () => go("/playlist?list=" + encodeURIComponent(n));
+    view().appendChild(card);
   });
+}
+
+function pagePlaylistDetail(name) {
+  setChips(null);
+  const items = S.playlists[name];
+  view().innerHTML = "";
+  if (!items) return view().appendChild(el("div", "empty", "再生リストが見つかりません"));
+  const h = el("div", "sechead");
+  h.innerHTML = esc(name) + ' <span class="badge">' + items.length + "本</span>";
+  const play = el("button", "pill solid", "すべて再生");
+  play.onclick = () => items.length && go("/watch?v=" + items[0].videoId + "&list=" + encodeURIComponent(name) + "&index=0");
+  h.appendChild(play);
+  view().appendChild(h);
+  const grid = el("div", "grid");
+  items.forEach((v, i) => {
+    const c = videoCard(v);
+    c.onclick = () => go("/watch?v=" + (v.videoId || v.id) + "&list=" + encodeURIComponent(name) + "&index=" + i);
+    const rm = el("button", "pill", "削除");
+    rm.style.marginTop = "8px";
+    rm.onclick = (e) => { e.stopPropagation(); items.splice(i, 1); LS.set("playlists", S.playlists); pagePlaylistDetail(name); };
+    c.appendChild(rm);
+    grid.appendChild(c);
+  });
+  view().appendChild(grid);
+}
+
+/* 視聴ページの再生リストパネル */
+function renderPlaylistPanel(side, id) {
+  if (!curList || !S.playlists[curList]) return;
+  const items = S.playlists[curList];
+  let idx = items.findIndex((x) => x.videoId === id);
+  if (idx < 0) idx = Math.min(curListIndex, items.length - 1);
+  curListIndex = idx;
+  const panel = el("div", "plpanel");
+  const head = el("div", "plhead");
+  head.innerHTML = "<div><b>" + esc(curList) + "</b><br><span>" + (idx + 1) + " / " + items.length + "</span></div>";
+  const body = el("div", "plbody");
+  items.forEach((v, i) => {
+    const row = el("div", "plitem" + (i === idx ? " on" : ""));
+    row.innerHTML = '<span class="plidx">' + (i === idx ? "▶" : i + 1) + "</span>" +
+      '<img loading="lazy" src="' + esc(plThumb(v)) + '" alt="">' +
+      '<div class="plt">' + esc(v.title) + "</div>";
+    row.onclick = () => go("/watch?v=" + v.videoId + "&list=" + encodeURIComponent(curList) + "&index=" + i);
+    body.appendChild(row);
+  });
+  panel.appendChild(head); panel.appendChild(body);
+  side.prepend(panel);
+}
+function playlistNext() {
+  if (!curList || !S.playlists[curList]) return false;
+  const items = S.playlists[curList];
+  const n = curListIndex + 1;
+  if (n >= items.length) return false;
+  go("/watch?v=" + items[n].videoId + "&list=" + encodeURIComponent(curList) + "&index=" + n);
+  return true;
 }
 
 const slim = (v) => ({ videoId: v.videoId || v.id, title: v.title, author: v.author, authorId: v.authorId,
@@ -1443,6 +1773,7 @@ function render() {
   nav.abort = new AbortController();
   document.onkeydown = null;
   $("#playerWrap")?.classList.remove("theater");
+  document.body.classList.remove("theater");
   $("#main").classList.remove("wide");
   scrollTo(0, 0);
 
@@ -1452,14 +1783,20 @@ function render() {
 
   if (p === "/" ) { document.title = "NKYS Tube Pro"; return pageHome(); }
   if (p === "/results" || p === "/search") { const q = sp.get("q") || ""; document.title = q + " - NKYS Tube Pro"; return pageSearch(q); }
-  if (p === "/watch") { document.title = "再生中 - NKYS Tube Pro"; return pageWatch(sp.get("v")); }
+  if (p === "/watch") {
+    curList = sp.get("list");
+    curListIndex = Math.max(0, parseInt(sp.get("index"), 10) || 0);
+    document.title = "再生中 - NKYS Tube Pro";
+    return pageWatch(sp.get("v"));
+  }
   if (p === "/channel") return pageChannel(sp.get("c"));
-  if (p === "/shorts") return pageShorts();
+  if (p === "/shorts") return pageShorts(sp.get("v"));
   if (p === "/subs") return pageSubs();
   if (p === "/history") return localPage("履歴", S.history);
   if (p === "/liked") return localPage("高く評価した動画", S.liked);
   if (p === "/watchlater") return localPage("後で見る", S.later);
   if (p === "/playlists") return pagePlaylists();
+  if (p === "/playlist") return pagePlaylistDetail(sp.get("list") || "");
   view().innerHTML = '<div class="empty">ページが見つかりません</div>';
 }
 
