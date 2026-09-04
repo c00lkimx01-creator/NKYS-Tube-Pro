@@ -55,17 +55,21 @@ header{position:fixed;top:0;left:0;right:0;height:var(--hdr);display:flex;align-
 .logo .mark svg{width:11px;height:11px;fill:#fff}
 .logo sup{font-size:10px;color:var(--fg-dim);letter-spacing:0}
 .hcenter{flex:1;display:flex;justify-content:center;align-items:center;gap:8px;min-width:0}
-.searchbox{display:flex;flex:1;max-width:640px;height:40px}
-.searchbox input{flex:1;min-width:0;background:#121212;border:1px solid var(--line);border-right:0;
-  border-radius:20px 0 0 20px;padding:0 16px;outline:none}
-:root[data-theme="light"] .searchbox input{background:#fff}
-.searchbox input:focus{border-color:var(--blue)}
-.searchbox button{width:64px;border:1px solid var(--line);background:var(--bg-hover);border-radius:0 20px 20px 0;cursor:pointer}
-.searchbox button svg{width:22px;height:22px;fill:currentColor;vertical-align:middle}
-.searchbox .voice-search{width:40px;height:40px;flex:none;margin-left:8px;border:1px solid var(--line);
-  border-radius:50% !important;background:var(--chip);display:grid;place-items:center;cursor:pointer}
+.searchbox{display:flex;align-items:center;flex:1;max-width:640px;height:40px}
+.searchbox .sfield{display:flex;align-items:stretch;flex:1;min-width:0;height:40px;background:#121212;
+  border:1px solid var(--line);border-radius:20px;padding:0;overflow:hidden}
+:root[data-theme="light"] .searchbox .sfield{background:#fff}
+.searchbox .sfield:focus-within{border-color:var(--blue)}
+.searchbox input{flex:1;min-width:0;background:transparent;border:0;padding:0 12px 0 16px;outline:none}
+/* 検索ボタン: ピル右端に一体化したD型（縦仕切り＋外側はピルの曲線） */
+.searchbox button[type="submit"]{width:56px;flex:none;border:0;border-left:1px solid var(--line);
+  border-radius:0;background:var(--chip);display:grid;place-items:center;cursor:pointer}
+.searchbox button[type="submit"]:hover{background:var(--bg-hover)}
+.searchbox button[type="submit"] svg{width:22px;height:22px;fill:currentColor}
+.searchbox .voice-search{width:40px;height:40px;flex:none;margin-left:8px;border:0;
+  border-radius:50% !important;background:var(--chip);color:var(--chip-on);display:grid;place-items:center;cursor:pointer}
 .searchbox .voice-search:hover{background:var(--bg-hover)}
-.searchbox .voice-search svg{width:21px;height:21px}
+.searchbox .voice-search svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .searchbox .voice-search.listening{background:var(--brand);color:#fff;border-color:var(--brand)}
 
 .hright{display:flex;align-items:center;gap:4px}
@@ -211,8 +215,10 @@ button, .row input[type=text], .row textarea, .row select, dialog, #toast, #desc
 .snav, .subrow{ border-radius:var(--radius-pill) !important; }
 .icobtn{width:40px;height:40px;border-radius:var(--radius-pill) !important}
 #btnMenu{border-radius:50% !important}
-.searchbox input{border-right:0;border-radius:var(--radius-pill) 0 0 var(--radius-pill) !important}
-.searchbox button{width:64px;border-radius:0 var(--radius-pill) var(--radius-pill) 0 !important}
+/* 検索送信ボタン: ピル右端に一体化したD型。角丸は0(!important)で
+   button{border-radius}の上書きを打ち消し、右側は親ピルのoverflow:hiddenで曲線に切り抜く */
+.searchbox input{border:0 !important}
+.searchbox button[type="submit"]{border-radius:0 !important}
 /* ショート・プレイヤー周りのオーバーレイも適度に丸み */
 .sh-menu, .sh-panel{ border-radius:var(--radius-sm) !important; }
 .sh-menu .mi{ border-radius:6px !important; }
@@ -895,16 +901,15 @@ dialog,
   </div>
   <div class="hcenter">
     <form class="searchbox" id="searchForm">
-      <input id="q" type="text" placeholder="検索" autocomplete="off" />
-      <button type="submit" aria-label="検索"><svg viewBox="0 0 24 24"><path d="M16.296 16.996a8 8 0 11.707-.708l3.909 3.91-.707.707-3.909-3.909zM18 11a7 7 0 00-14 0 7 7 0 1014 0z"/></svg></button>
-      <button type="button" class="voice-search" id="btnVoiceSearch" aria-label="音声検索" title="音声検索"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 003-3V6a3 3 0 00-6 0v5a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 006 6.92V21H8v1h8v-1h-3v-3.08A7 7 0 0019 11h-2z"/></svg></button>
+      <div class="sfield"><input id="q" type="text" placeholder="検索" autocomplete="off" />
+      <button type="submit" aria-label="検索"><svg viewBox="0 0 24 24"><path d="M16.296 16.996a8 8 0 11.707-.708l3.909 3.91-.707.707-3.909-3.909zM18 11a7 7 0 00-14 0 7 7 0 1014 0z"/></svg></button></div>
+      <button type="button" class="voice-search" id="btnVoiceSearch" aria-label="音声検索" title="音声検索"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button>
     </form>
     <div id="sugBox"></div>
   </div>
   <div class="hright">
     <button class="icobtn" id="btnTheme" title="テーマ"><svg viewBox="0 0 24 24"><path d="M12.05 3.02a9.03 9.03 0 108.93 10.7 7.5 7.5 0 01-8.93-10.7zm-.79 1.16a8 8 0 108.56 10.24 8.5 8.5 0 01-8.56-10.24z"/></svg></button>
-    <button class="icobtn" id="btnKeys" title="キーボードショートカット"><svg viewBox="0 0 24 24"><path d="M21 5H3a1 1 0 00-1 1v12a1 1 0 001 1h18a1 1 0 001-1V6a1 1 0 00-1-1zm0 13H3V6h18v12zM6 8h2v2H6V8zm3.5 0h2v2h-2V8zM13 8h2v2h-2V8zm3.5 0h2v2h-2V8zM6 11.5h2v2H6v-2zm3.5 0h2v2h-2v-2zM13 11.5h2v2h-2v-2zm3.5 0h2v2h-2v-2zM7.5 15h9v1.2h-9V15z"/></svg></button>
-    <button class="icobtn" id="btnSettings" title="設定"><svg viewBox="0 0 24 24"><path d="M12 8.75a3.25 3.25 0 100 6.5 3.25 3.25 0 000-6.5zm0 5.5a2.25 2.25 0 110-4.5 2.25 2.25 0 010 4.5z"/><path d="M20.13 10.32l-1.6-.36a6.9 6.9 0 00-.62-1.5l.9-1.38a.6.6 0 00-.07-.75l-1.6-1.6a.6.6 0 00-.75-.07l-1.38.9c-.47-.26-.98-.47-1.5-.62l-.36-1.6a.6.6 0 00-.59-.47h-2.26a.6.6 0 00-.59.47l-.36 1.6c-.53.15-1.03.36-1.5.62l-1.38-.9a.6.6 0 00-.75.07l-1.6 1.6a.6.6 0 00-.07.75l.9 1.38c-.26.47-.47.97-.62 1.5l-1.6.36a.6.6 0 00-.47.59v2.26a.6.6 0 00.47.59l1.6.36c.15.53.36 1.03.62 1.5l-.9 1.38a.6.6 0 00.07.75l1.6 1.6a.6.6 0 00.75.07l1.38-.9c.47.26.97.47 1.5.62l.36 1.6a.6.6 0 00.59.47h2.26a.6.6 0 00.59-.47l.36-1.6c.53-.15 1.03-.36 1.5-.62l1.38.9a.6.6 0 00.75-.07l1.6-1.6a.6.6 0 00.07-.75l-.9-1.38c.26-.47.47-.97.62-1.5l1.6-.36a.6.6 0 00.47-.59v-2.26a.6.6 0 00-.47-.59zm-.53 2.37l-2.07.47-.13.5c-.13.5-.33.97-.58 1.4l-.26.44 1.16 1.79-1.07 1.07-1.79-1.16-.44.26c-.43.25-.9.45-1.4.58l-.5.13-.47 2.07h-1.5l-.47-2.07-.5-.13c-.5-.13-.97-.33-1.4-.58l-.44-.26-1.79 1.16-1.07-1.07 1.16-1.79-.26-.44c-.25-.43-.45-.9-.58-1.4l-.13-.5-2.07-.47v-1.5l2.07-.47.13-.5c.13-.5.33-.97.58-1.4l.26-.44-1.16-1.79 1.07-1.07 1.79 1.16.44-.26c.43-.25.9-.45 1.4-.58l.5-.13.47-2.07h1.5l.47 2.07.5.13c.5.13.97.33 1.4.58l.44.26 1.79-1.16 1.07 1.07-1.16 1.79.26.44c.25.43.45.9.58 1.4l.13.5 2.07.47v1.5z"/></svg></button>
+    <button class="icobtn" id="btnSettings" title="設定" aria-label="設定"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.43 12.98c.04-.32.07-.65.07-.98s-.03-.66-.07-.98l2.11-1.65a.5.5 0 00.12-.64l-2-3.46a.5.5 0 00-.61-.22l-2.49 1a7.3 7.3 0 00-1.7-.98l-.38-2.65A.5.5 0 0014 2h-4a.5.5 0 00-.49.42l-.38 2.65c-.61.25-1.17.58-1.7.98l-2.49-1a.5.5 0 00-.61.22l-2 3.46a.5.5 0 00.12.64l2.11 1.65c-.04.32-.07.66-.07.98s.03.66.07.98L2.55 14.63a.5.5 0 00-.12.64l2 3.46a.5.5 0 00.61.22l2.49-1c.53.4 1.09.73 1.7.98l.38 2.65A.5.5 0 0010 22h4a.5.5 0 00.49-.42l.38-2.65c.61-.25 1.17-.58 1.7-.98l2.49 1a.5.5 0 00.61-.22l2-3.46a.5.5 0 00-.12-.64l-2.12-1.65zM12 15.5A3.5 3.5 0 1115.5 12 3.5 3.5 0 0112 15.5z"/></svg></button>
     <div class="avatar">N</div>
   </div>
 </header>
