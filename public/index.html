@@ -4,19 +4,22 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>NKYS Tube Pro</title>
-<meta name="description" content="NKYS Tube Pro — Invidious API を役割分担し、yt.omada.cafe をストリーム優先で使う高速動画ビューア。" />
+<meta name="description" content="NKYS Tube Pro — Piped / Invidious / siatube を組み合わせた高速動画ビューア。" />
 <meta property="og:title" content="NKYS Tube Pro" />
 <meta property="og:description" content="高速・安定・広告なしの動画ビューア。" />
 <meta property="og:type" content="website" />
 <meta name="twitter:card" content="summary_large_image" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='22' y='5' rx='6' fill='%23ff0033'/%3E%3Cpath d='M13 11l8 5-8 5z' fill='%23fff'/%3E%3C/svg%3E" />
 <!-- 動画表示を高速化するための事前接続 -->
-<link rel="preconnect" href="https://yt.omada.cafe" crossorigin />
-<link rel="dns-prefetch" href="https://yt.omada.cafe" />
+<link rel="preconnect" href="https://api.piped.private.coffee" crossorigin />
+<link rel="dns-prefetch" href="https://api.piped.private.coffee" />
 <link rel="preconnect" href="https://i.ytimg.com" crossorigin />
 <link rel="dns-prefetch" href="https://i.ytimg.com" />
 <link rel="preconnect" href="https://www.youtube-nocookie.com" crossorigin />
 <link rel="dns-prefetch" href="https://www.youtube-nocookie.com" />
+<link rel="preconnect" href="https://yt.omada.cafe" crossorigin />
+<link rel="dns-prefetch" href="https://yt.omada.cafe" />
+<link rel="preconnect" href="https://siatube.com" crossorigin />
 <link rel="preconnect" href="https://inv.nadeko.net" crossorigin />
 <link rel="preconnect" href="https://pipedapi.kavin.rocks" crossorigin />
 <link rel="dns-prefetch" href="https://pipedapi.kavin.rocks" />
@@ -995,7 +998,7 @@ dialog,
   </div>
   <div class="row"><label><input type="checkbox" id="setNocookieDefault" /> 再生ページを既定で Nocookie 埋め込みにする</label></div>
   <div class="row" style="font-size:12px;color:var(--fg-dim)">
-    ストリーム: <b style="color:var(--brand)">yt.omada.cafe 優先</b>（local=true で確実に再生）／ 失敗時は Nocookie 埋め込みに自動フォールバック。
+    ストリーム: <b style="color:var(--brand)">Invidious API (yt.omada.cafe) 優先</b>（Piped / siatube に自動フォールバック）／ 失敗時は Nocookie 埋め込みに自動フォールバック。
     メタ情報・検索・コメント・急上昇は Invidious インスタンスへ役割分担。
   </div>
   <div class="row" id="healthBox" style="font-size:12px;color:var(--fg-dim)"></div>
@@ -1014,31 +1017,56 @@ dialog,
 "use strict";
 /* =====================================================================
    NKYS Tube Pro — single-file client
-   ストリーム: yt.omada.cafe を最優先
+   ストリーム: Piped API を最優先
    その他: Invidious インスタンスを役割別に分担（検索/急上昇/メタ/コメント/チャンネル）
    ===================================================================== */
 
 const STREAM_PRIMARY = "https://yt.omada.cafe";
 
-/* 役割分担プール — 各役割で別インスタンス群に振ることで負荷分散＆速度向上 */
+/* Invidious ストリーム取得の主力 */
+const INV_STREAM = [
+  "https://yt.omada.cafe",
+  "https://inv.nadeko.net",
+  "https://invidious.nerdvpn.de",
+  "https://iv.melmac.space",
+  "https://invidious.f5.si",
+];
+
+/* Piped API（ストリーム / 検索の補助） */
+const PIPED = [
+  "https://api.piped.private.coffee",
+  "https://pipedapi.ducks.party",
+  "https://pipedapi.nosebs.ru",
+  "https://pipedapi.adminforge.de",
+  "https://pipedapi.kavin.rocks",
+  "https://pipedapi.reallyaweso.me",
+];
+
+/* Invidious（検索 / メタ / コメント / チャンネル） */
+const INV_ALL = [
+  "https://yt.omada.cafe",
+  "https://inv.nadeko.net",
+  "https://invidious.nerdvpn.de",
+  "https://yewtu.be",
+  "https://invidious.jing.rocks",
+  "https://iv.melmac.space",
+  "https://invidious.f5.si",
+  "https://invidious.privacyredirect.com",
+  "https://invidious.perennialte.ch",
+  "https://iv.duti.dev",
+  "https://invidious.materialio.us",
+];
+
+/* 役割分担プール */
 const POOLS = {
-  stream:  [STREAM_PRIMARY],
-  video:   ["https://yt.omada.cafe","https://inv.nadeko.net","https://invidious.nerdvpn.de","https://invidious.jing.rocks","https://yewtu.be"],
-  search:  ["https://invidious.nerdvpn.de","https://inv.nadeko.net","https://invidious.privacyredirect.com","https://invidious.reallyaweso.me","https://iv.melmac.space"],
-  trending:["https://invidious.jing.rocks","https://yewtu.be","https://inv.nadeko.net","https://invidious.materialio.us","https://invidious.privacyredirect.com"],
-  comments:["https://yewtu.be","https://invidious.nerdvpn.de","https://iv.melmac.space","https://invidious.jing.rocks","https://inv.nadeko.net"],
-  channel: ["https://inv.nadeko.net","https://invidious.nerdvpn.de","https://yewtu.be","https://invidious.jing.rocks","https://iv.melmac.space"],
+  stream:  INV_STREAM,
+  video:   INV_STREAM.concat(INV_ALL.filter((b) => !INV_STREAM.includes(b))),
+  search:  INV_ALL,
+  trending:INV_ALL,
+  comments:INV_ALL,
+  channel: INV_ALL,
 };
 const FALLBACK_ALL = [...new Set(Object.values(POOLS).flat())];
-
-/* Piped API（検索のショート判定・チャンネル取得の補完に使用） */
-const PIPED = [
-  "https://pipedapi.kavin.rocks",
-  "https://pipedapi.adminforge.de",
-  "https://api.piped.private.coffee",
-  "https://pipedapi.reallyaweso.me",
-  "https://pipedapi.drgns.space",
-];
 
 /* siatube API（検索 / ショート / チャンネル取得の第3ソース） */
 const SIA = "https://siatube.com";
@@ -1149,9 +1177,52 @@ function api(role, path, opt) {
   return p;
 }
 
-/* ストリームは yt.omada.cafe を最優先。失敗時のみ他へフォールバック
-   local=true を付けることで、omada.cafe 自身がストリーム URL を仲介する形になり、
-   googlevideo 直リンクの CORS/帯域制限に左右されず確実に再生できる。 */
+function pipedToInvidious(d, id) {
+  if (!d || (!d.videoStreams && !d.audioStreams && !d.hls)) return null;
+  const vs = (d.videoStreams || []).filter((x) => x && x.url && !/LBRY/i.test(x.quality || ""));
+  const as = (d.audioStreams || []).filter((x) => x && x.url && !/LBRY/i.test(x.quality || ""));
+  const fmt = (x) => ({
+    url: x.url,
+    type: x.mimeType || "",
+    itag: String(x.itag == null ? "" : x.itag),
+    qualityLabel: x.quality || "",
+    bitrate: x.bitrate,
+    container: x.format || "",
+    encoding: x.codec || "",
+    audioQuality: x.quality || "",
+  });
+  return {
+    videoId: id,
+    title: d.title || "",
+    description: d.description ? String(d.description).replace(/<[^>]+>/g, "") : "",
+    descriptionHtml: d.description || "",
+    author: d.uploader || "",
+    authorId: pipedChannelId(d.uploaderUrl),
+    authorUrl: d.uploaderUrl || "",
+    authorThumbnails: d.uploaderAvatar ? [{ url: d.uploaderAvatar }] : [],
+    authorVerified: !!d.uploaderVerified,
+    subCountText: d.uploaderSubscriberCount > 0 ? fmtNum(d.uploaderSubscriberCount) : "",
+    lengthSeconds: d.duration || 0,
+    viewCount: d.views || 0,
+    likeCount: d.likes > 0 ? d.likes : 0,
+    published: d.uploadDate ? Math.round(Date.parse(d.uploadDate) / 1000) : 0,
+    publishedText: d.uploadDate || "",
+    liveNow: !!d.livestream,
+    hlsUrl: d.hls || "",
+    dashUrl: d.dash || "",
+    /* 音声込み(=progressive)のものを formatStreams、映像/音声別のものを adaptiveFormats に */
+    formatStreams: vs.filter((x) => !x.videoOnly).map(fmt),
+    adaptiveFormats: vs.filter((x) => x.videoOnly).map(fmt).concat(as.map(fmt)),
+    recommendedVideos: (d.relatedStreams || [])
+      .filter((x) => x && (x.type === "stream" || /watch\?v=/.test(x.url || "")))
+      .map(normPipedVideo)
+      .filter((x) => x.videoId),
+    __src: "piped",
+  };
+}
+
+/* 動画データ: Piped を主・Invidious を副として同時に取得し、
+   ストリームが取れた方を採用する。両方だめなら nocookie 埋め込みに委ねる。 */
 async function getVideo(id, signal) {
   const path = "/api/v1/videos/" + encodeURIComponent(id);
   const key = "video|" + id;
@@ -1159,18 +1230,18 @@ async function getVideo(id, signal) {
   if (c && Date.now() - c.at < TTL) return c.v;
   if (inflight.has(key)) return inflight.get(key);
   const p = (async () => {
-    /* プライマリと代替インスタンスを同時に投げ、待ち時間を最小化 */
-    const primaryP = fetchJson(STREAM_PRIMARY, path + "?local=true", signal, 6000).catch(() => null);
-    const altP = race(POOLS.video.filter((b) => b !== STREAM_PRIMARY), path, signal).catch(() => null);
-    const primary = await primaryP;
+    const pipedP = pipedGet("/streams/" + encodeURIComponent(id), signal)
+      .then((d) => pipedToInvidious(d, id))
+      .catch(() => null);
+    const invP = race(POOLS.stream, path + "?local=true", signal, { wave: 5, timeouts: [4500, 8000] })
+      .catch(() => race(POOLS.video, path, signal, { wave: 6, timeouts: [8000] }).catch(() => null));
+
+    const inv = await invP;
     if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
-    if (hasStreams(primary)) { cache.set(key, { v: primary, at: Date.now() }); return primary; }
-    const alt = await altP;
+    if (hasStreams(inv)) { cache.set(key, { v: inv, at: Date.now() }); return inv; }
+    const piped = await pipedP;
     if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
-    let v = hasStreams(alt) ? alt : (primary || alt);
-    if (!v) {
-      try { v = await fetchJson(STREAM_PRIMARY, path, signal, 5000); } catch (_) {}
-    }
+    const v = hasStreams(piped) ? piped : (inv || piped);
     if (!v) throw new Error("video unavailable");
     cache.set(key, { v, at: Date.now() });
     return v;
@@ -1347,11 +1418,20 @@ const isLive = (v) => !!(v && (v.liveNow || v.isLive || v.live || v.type === "li
 
 /* ---------------- router ---------------- */
 const nav = { abort: null };
+const APP_FILE_MODE = /\/app\.html$/i.test(location.pathname);
+const currentPath = () => APP_FILE_MODE
+  ? ((location.hash.slice(1).split("?")[0] || "/"))
+  : location.pathname;
+const currentSearch = () => APP_FILE_MODE
+  ? (location.hash.includes("?") ? "?" + location.hash.split("?").slice(1).join("?") : "")
+  : location.search;
 function go(path, replace) {
-  if (replace) history.replaceState({}, "", path); else history.pushState({}, "", path);
+  const target = APP_FILE_MODE ? "/app.html#" + path : path;
+  if (replace) history.replaceState({}, "", target); else history.pushState({}, "", target);
   render();
 }
 addEventListener("popstate", render);
+if (APP_FILE_MODE) addEventListener("hashchange", render);
 document.addEventListener("click", (e) => {
   const ex = e.target.closest("[data-explore]");
   if (ex) { e.preventDefault(); go("/results?q=" + encodeURIComponent(ex.dataset.explore)); return; }
@@ -1495,16 +1575,21 @@ async function homeFeed(chip, signal) {
     : "/trending?region=" + RG() + "";
   /* 先到着したソースで即座に返し、もう片方は1.5秒だけ待ってマージ。
      遅い/落ちているソースが全体の表示を遅らせないようにする */
-  let invResult = null, pipedResult = null;
+  let invResult = null, pipedResult = null, siaResult = null;
   const t1 = api(q ? "search" : "trending", invPath, { signal })
     .then((v) => { invResult = { status: "fulfilled", value: v }; })
     .catch((e) => { invResult = { status: "rejected", reason: e }; });
   const t2 = pipedGet(pipedPath, signal)
     .then((v) => { pipedResult = { status: "fulfilled", value: v }; })
     .catch((e) => { pipedResult = { status: "rejected", reason: e }; });
+  /* Siatube は現在も安定して応答するため、ホーム一覧の独立した取得元として常時併用する。 */
+  const siaQuery = q || "おすすめ";
+  const t3 = siaSearch(siaQuery, signal, false)
+    .then((v) => { siaResult = { status: "fulfilled", value: v }; })
+    .catch((e) => { siaResult = { status: "rejected", reason: e }; });
   await Promise.race([
-    Promise.all([t1, t2]),
-    Promise.race([t1, t2]).then(() => new Promise((r) => setTimeout(r, 1500))),
+    Promise.all([t1, t2, t3]),
+    Promise.race([t1, t2, t3]).then(() => new Promise((r) => setTimeout(r, 1500))),
     new Promise((r) => setTimeout(r, 12000)),
   ]);
   if (signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
@@ -1519,6 +1604,10 @@ async function homeFeed(chip, signal) {
   if (pipedResult && pipedResult.status === "fulfilled") {
     const items = Array.isArray(pipedResult.value) ? pipedResult.value : (pipedResult.value?.items || []);
     items.filter((v) => v.type === "stream" || v.videoId || v.url).map((v) => v.videoId ? v : normPipedVideo(v)).forEach(add);
+  }
+  if (siaResult && siaResult.status === "fulfilled") {
+    const items = Array.isArray(siaResult.value) ? siaResult.value : (siaResult.value?.items || []);
+    items.filter((v) => v.type === "video" || v.type === "stream" || v.videoId || v.url).map(normSiaVideo).forEach(add);
   }
   if (!merged.length) throw new Error("Home feed unavailable");
   return merged;
@@ -1557,7 +1646,10 @@ async function pageHome() {
   root.appendChild(normalSec);
 
   const signal = nav.abort.signal;
-  const shortsPromise = fetchShorts(["#shorts", "shorts 音楽", "shorts ゲーム"], signal);
+  /* Short棚: 登録チャンネルのショート → 検索履歴ベース */
+  const shortsPromise = fetchSubsShorts(signal, 4)
+    .then((subShorts) => (subShorts.length ? subShorts : fetchShorts(personalShortQueries().slice(0, 3), signal)))
+    .catch(() => fetchShorts(personalShortQueries().slice(0, 3), signal));
   const trendPromise = homeFeed(homeChip, signal);
 
   shortsPromise.then((items) => {
@@ -1571,17 +1663,42 @@ async function pageHome() {
 
   /* 前回取得したフィードを即座に描画し、裏で最新に更新（SWR） */
   const feedKey = "feed_" + homeChip;
+  /* おすすめ: 登録チャンネルの新着 + 検索履歴に基づく動画 */
+  let recFilled = false;
+  const paintRec = (list) => {
+    if (signal.aborted || !list || !list.length) return false;
+    recShelf.innerHTML = "";
+    recShelf.removeAttribute("aria-busy");
+    list.slice(0, 12).forEach((v, i) => recShelf.appendChild(videoCard(v, null, i)));
+    recFilled = recShelf.children.length > 0;
+    return recFilled;
+  };
+  if (homeChip === "すべて") {
+    Promise.all([
+      fetchSubsVideos(signal, 6).catch(() => []),
+      fetchHistoryRecs(signal, 20).catch(() => []),
+    ]).then(([subsV, histV]) => {
+      const out = [], seen = new Set();
+      subsV.concat(histV).forEach((v) => {
+        const id = vidOf(v);
+        if (!id || seen.has(id)) return;
+        seen.add(id); out.push(v);
+      });
+      paintRec(out);
+    }).catch(() => {});
+  }
   const paintFeed = (data) => {
     if (signal.aborted) return;
     const videos = (data || []).filter((v) => (v.type ? v.type === "video" || v.type === "shortVideo" : true) && (v.videoId || v.id));
-    recShelf.innerHTML = "";
-    recShelf.removeAttribute("aria-busy");
-    (videos || []).slice(0, 10).forEach((v, i) => recShelf.appendChild(videoCard(v, null, i)));
-
-    if (!recShelf.children.length) recSec.remove();
+    if (!recFilled) {
+      recShelf.innerHTML = "";
+      recShelf.removeAttribute("aria-busy");
+      (videos || []).slice(0, 10).forEach((v, i) => recShelf.appendChild(videoCard(v, null, i)));
+      if (!recShelf.children.length) recSec.remove();
+    }
     normalBox.innerHTML = "";
     normalBox.removeAttribute("aria-busy");
-    videos.slice(10).forEach((v, i) => normalBox.appendChild(videoCard(v, null, i + 10)));
+    videos.slice(recFilled ? 0 : 10).forEach((v, i) => normalBox.appendChild(videoCard(v, null, i + 10)));
 
     if (!normalBox.children.length) normalBox.appendChild(el("div", "empty", "動画が見つかりませんでした"));
   };
@@ -1592,7 +1709,7 @@ async function pageHome() {
     try { LS.set(feedKey, (data || []).slice(0, 40)); } catch (_) {}
   }).catch((e) => {
     if (!isAbort(e) && !signal.aborted) {
-            recSec.remove();
+            if (!recFilled) recSec.remove();
       normalBox.removeAttribute("aria-busy");
       normalBox.innerHTML = '<div class="empty">読み込みに失敗しました。再試行してください。</div>';
 
@@ -2169,12 +2286,35 @@ function commentGhostScreen(n) {
   }
   return w;
 }
+/* コメント: Invidious → Piped の順で取得（Invidious が落ちていても表示できるように） */
+async function getComments(id, signal) {
+  try {
+    const d = await api("comments", "/api/v1/comments/" + id + "?sort_by=top", { signal });
+    if (d && (d.comments || []).length) return d;
+  } catch (_) {}
+  const d = await pipedGet("/comments/" + encodeURIComponent(id), signal);
+  return {
+    commentCount: d.commentCount,
+    comments: (d.comments || []).map((c) => ({
+      author: c.author,
+      authorId: pipedChannelId(c.commentorUrl),
+      authorThumbnails: c.thumbnail ? [{ url: c.thumbnail }] : [],
+      content: c.commentText || "",
+      publishedText: c.commentedTime || "",
+      likeCount: c.likeCount > 0 ? c.likeCount : 0,
+      isPinned: !!c.pinned,
+      creatorHeart: !!c.hearted,
+      replies: c.replyCount > 0 ? { replyCount: c.replyCount } : undefined,
+    })),
+  };
+}
+
 async function loadComments(id) {
   const box = $("#comments");
   box.innerHTML = "";
   box.appendChild(commentGhostScreen(6));
   try {
-    const d = await api("comments", "/api/v1/comments/" + id + "?sort_by=top");
+    const d = await getComments(id);
     box.innerHTML = "";
     (d.comments || []).slice(0, 50).forEach((c) => {
       const n = el("div", "comment");
@@ -2541,6 +2681,78 @@ function setShortsPlayer(mode) {
   toast(mode === "stream" ? "ストリーム再生に切り替えました" : "YouTube 埋め込み再生に切り替えました");
 }
 
+/* ---- パーソナライズ (登録チャンネル / 検索履歴) ---- */
+/* 検索履歴から使えるクエリを取り出す */
+function historyQueries(n) {
+  const out = [], seen = new Set();
+  (S.searches || []).forEach((q) => {
+    const k = String(q && q.q ? q.q : q || "").trim();
+    if (!k || seen.has(k)) return;
+    seen.add(k); out.push(k);
+  });
+  return out.slice(0, n || 5);
+}
+/* ショート用のクエリ: 検索履歴 → 登録チャンネル名 → 既定 */
+function personalShortQueries() {
+  const qs = historyQueries(3).map((q) => q + " shorts")
+    .concat((S.subs || []).slice(0, 3).map((s) => (s.name || "") + " shorts").filter((q) => q.trim() !== "shorts"));
+  return qs.length ? qs : SHORT_QUERIES;
+}
+/* 登録チャンネルのショートをまとめて取得 */
+async function fetchSubsShorts(signal, perCh) {
+  const subs = (S.subs || []).slice(0, 12);
+  if (!subs.length) return [];
+  const res = await Promise.allSettled(subs.map((s) => fetchChannelShorts(s.id, null, signal)));
+  const out = [];
+  res.forEach((r) => {
+    if (r.status !== "fulfilled") return;
+    (r.value || []).slice(0, perCh || 6).forEach((v) => {
+      const id = vidOf(v);
+      if (!id || shortsSeen.has(id)) return;
+      shortsSeen.add(id); v.videoId = id; v.isShort = true; out.push(v);
+    });
+  });
+  for (let i = out.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [out[i], out[j]] = [out[j], out[i]]; }
+  return out;
+}
+/* 登録チャンネルの最新動画 */
+async function fetchSubsVideos(signal, perCh) {
+  const subs = (S.subs || []).slice(0, 12);
+  if (!subs.length) return [];
+  const res = await Promise.allSettled(subs.map((s) =>
+    api("channel", "/api/v1/channels/" + encodeURIComponent(s.id) + "/videos", { signal })));
+  const out = [], seen = new Set();
+  res.forEach((r) => {
+    if (r.status !== "fulfilled") return;
+    (((r.value && (r.value.videos || r.value)) || [])).slice(0, perCh || 8).forEach((v) => {
+      const id = vidOf(v);
+      if (!id || seen.has(id)) return;
+      seen.add(id); v.videoId = id; out.push(v);
+    });
+  });
+  out.sort((a, b) => (b.published || 0) - (a.published || 0));
+  return out;
+}
+/* 検索履歴に基づくおすすめ動画 */
+async function fetchHistoryRecs(signal, limit) {
+  const qs = historyQueries(4);
+  if (!qs.length) return [];
+  const res = await Promise.allSettled(qs.map((q) =>
+    api("search", "/api/v1/search?q=" + encodeURIComponent(q) + "&type=video&region=" + RG(), { signal })));
+  const out = [], seen = new Set();
+  res.forEach((r) => {
+    if (r.status !== "fulfilled") return;
+    (r.value || []).forEach((v) => {
+      if (v.type && v.type !== "video" && v.type !== "shortVideo") return;
+      const id = vidOf(v);
+      if (!id || seen.has(id)) return;
+      seen.add(id); v.videoId = id; out.push(v);
+    });
+  });
+  for (let i = out.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [out[i], out[j]] = [out[j], out[i]]; }
+  return out.slice(0, limit || 30);
+}
+
 /* 1件ずつ受け取ってショート候補を蓄積する共通処理 */
 function collectShorts(list, out) {
   (list || []).forEach((v) => {
@@ -2564,9 +2776,15 @@ function fetchShortsQuick(queries, signal) {
       for (let i = out.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [out[i], out[j]] = [out[j], out[i]]; }
       resolve(out);
     };
+    pending = queries.length * 2;
     queries.forEach((q) => {
+      /* Invidious と Piped を同時に叩き、先に届いた方から表示する */
       api("search", "/api/v1/search?q=" + encodeURIComponent(q) + "&type=video&region=" + RG() + "", { signal })
         .then((list) => { collectShorts(list, out); if (out.length >= 6) finish(); })
+        .catch(() => {})
+        .finally(() => { if (--pending <= 0) finish(); });
+      pipedGet("/search?q=" + encodeURIComponent(q + " shorts") + "&filter=videos", signal)
+        .then((d) => { collectShorts((d.items || []).map(normPipedVideo), out); if (out.length >= 6) finish(); })
         .catch(() => {})
         .finally(() => { if (--pending <= 0) finish(); });
     });
@@ -2588,16 +2806,19 @@ async function fetchShorts(queries, signal) {
       out.push(v);
     });
   });
-  /* Piped からも補完してさらに件数を増やす */
+  /* Piped / siatube からも補完してさらに件数を増やす */
   if (out.length < 20) {
-    try {
-      const d = await pipedGet("/search?q=" + encodeURIComponent("shorts") + "&filter=videos", signal);
-      (d.items || []).map(normPipedVideo).forEach((v) => {
-        if (!v.videoId || shortsSeen.has(v.videoId)) return;
-        if (!(v.lengthSeconds > 0 && v.lengthSeconds <= 180)) return;
-        shortsSeen.add(v.videoId); out.push(v);
-      });
-    } catch (_) {}
+    const more = await Promise.allSettled(
+      queries.slice(0, 4).concat(["shorts"]).map((q) =>
+        pipedGet("/search?q=" + encodeURIComponent(q + " shorts") + "&filter=videos", signal)));
+    more.forEach((r) => {
+      if (r.status !== "fulfilled") return;
+      collectShorts((r.value.items || []).map(normPipedVideo), out);
+    });
+  }
+  if (out.length < 10) {
+    try { collectShorts((await siaSearch(queries[0] || "shorts", signal, true)).map(normSiaVideo), out); }
+    catch (_) {}
   }
   for (let i = out.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [out[i], out[j]] = [out[j], out[i]]; }
   return out;
@@ -2821,7 +3042,7 @@ function shortItem(v) {
     const pn = openPanel("コメント", "読み込み中…");
     const body = pn.querySelector(".pn-body");
     try {
-      const d = await api("comments", "/api/v1/comments/" + id + "?sort_by=top");
+      const d = await getComments(id);
       body.textContent = ""; body.style.whiteSpace = "normal";
       (d.comments || []).slice(0, 50).forEach((c) => {
         const n = el("div", "comment");
@@ -3097,11 +3318,18 @@ async function pageShorts(startId) {
   /* プレーヤーAPIを先読みして初回再生の待ち時間を短縮 */
   ytApiReady();
   let list;
-  try { list = await fetchShortsQuick(SHORT_QUERIES.slice(0, 3), signal); }
+  /* 登録チャンネルのショートを最優先で表示 */
+  try { list = await fetchSubsShorts(signal, 6); }
   catch (e) { if (isAbort(e)) return; list = []; }
   if (signal.aborted) return;
+  /* 登録チャンネルが無い / 取得できない場合は検索履歴を元に補完 */
   if (!list.length) {
-    try { list = await fetchShorts(SHORT_QUERIES, signal); }
+    try { list = await fetchShortsQuick(personalShortQueries().slice(0, 3), signal); }
+    catch (e) { if (isAbort(e)) return; list = []; }
+    if (signal.aborted) return;
+  }
+  if (!list.length) {
+    try { list = await fetchShorts(personalShortQueries(), signal); }
     catch (e) { if (isAbort(e)) return; view().innerHTML = '<div class="empty">ショートを取得できませんでした</div>'; return; }
     if (signal.aborted) return;
   }
@@ -3130,7 +3358,7 @@ async function pageShorts(startId) {
   box.appendChild(end);
 
   /* 残りの検索結果はバックグラウンドで追加 (初回描画をブロックしない) */
-  fetchShorts(SHORT_QUERIES, signal).then((rest) => {
+  fetchShorts(personalShortQueries(), signal).then((rest) => {
     if (signal.aborted || !rest.length || !box.isConnected) return;
     box.removeChild(end); append(rest); box.appendChild(end);
   }).catch(() => {});
@@ -3141,7 +3369,7 @@ async function pageShorts(startId) {
     if (!es.some((e) => e.isIntersecting) || busy) return;
     busy = true; round++;
     try {
-      const qs = SHORT_QUERIES.slice().sort(() => Math.random() - .5).slice(0, 4)
+      const qs = personalShortQueries().slice().sort(() => Math.random() - .5).slice(0, 4)
         .map((q) => q + (round > 1 ? " " + round : ""));
       const nxt = await fetchShorts(qs, signal);
       if (!nxt.length) { end.textContent = "これ以上のショートはありません"; more.disconnect(); }
@@ -3564,7 +3792,7 @@ function renderPage() {
   $("#main").classList.remove("wide");
   scrollTo(0, 0);
 
-  const p = location.pathname, sp = new URLSearchParams(location.search);
+  const p = currentPath(), sp = new URLSearchParams(currentSearch());
   document.querySelectorAll(".snav").forEach((n) =>
     n.classList.toggle("active", (n.dataset.nav === "home" && p === "/") || "/" + n.dataset.nav === p ||
       (n.dataset.nav === "shorts" && p.startsWith("/short"))));
