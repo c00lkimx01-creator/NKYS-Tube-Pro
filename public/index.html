@@ -1119,7 +1119,7 @@ const isAbort = (e) => e && (e.name === "AbortError" || /abort/i.test(e.message 
 
 /* ---------------- network core ---------------- */
 let USE_PROXY = S.settings.proxy;
-const px = (u) => (USE_PROXY ? "/api/public/px?u=" + encodeURIComponent(u) : u);
+const px = (u) => (USE_PROXY ? "/px?u=" + encodeURIComponent(u) : u);
 
 const hRec = (b) => (S.health[b] || (S.health[b] = { fail: 0, ms: 1200 }));
 let hTimer;

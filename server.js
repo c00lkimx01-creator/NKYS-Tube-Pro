@@ -56,7 +56,7 @@ const server = http.createServer((req, res) => {
     }).end();
   }
   if (url.pathname === "/health") return res.writeHead(200, { "content-type": "application/json" }).end('{"ok":true}');
-  if (url.pathname === "/px") {
+  if (url.pathname === "/px" || url.pathname === "/api/px" || url.pathname === "/api/public/px") {
     const t = url.searchParams.get("u");
     if (!t) return res.writeHead(400).end("missing u");
     return proxy(req, res, t);
