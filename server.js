@@ -17,6 +17,12 @@ const ALLOW = [
   /(^|\.)omada\.cafe$/i, /(^|\.)nadeko\.net$/i, /(^|\.)nerdvpn\.de$/i, /(^|\.)jing\.rocks$/i,
   /(^|\.)yewtu\.be$/i, /(^|\.)privacyredirect\.com$/i, /(^|\.)materialio\.us$/i,
   /(^|\.)melmac\.space$/i, /(^|\.)reallyaweso\.me$/i, /(^|\.)googlevideo\.com$/i, /(^|\.)ytimg\.com$/i,
+  /* クライアントが利用する残りの API ホスト */
+  /(^|\.)workers\.dev$/i, /(^|\.)f5\.si$/i, /(^|\.)perennialte\.ch$/i, /(^|\.)duti\.dev$/i,
+  /(^|\.)private\.coffee$/i, /(^|\.)ducks\.party$/i, /(^|\.)nosebs\.ru$/i,
+  /(^|\.)adminforge\.de$/i, /(^|\.)kavin\.rocks$/i,
+  /(^|\.)siatube\.com$/i, /(^|\.)manus\.space$/i,
+  /(^|\.)youtube\.com$/i, /(^|\.)ggpht\.com$/i,
 ];
 const allowed = (h) => ALLOW.some((r) => r.test(h));
 
