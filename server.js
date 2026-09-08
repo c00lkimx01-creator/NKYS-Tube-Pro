@@ -1,7 +1,7 @@
 "use strict";
 /**
- * NKYS Tube Pro — ローカル / Render / Railway 用サーバー
- * （Vercel では api/public/px.js + 静的 index.html が使われます）
+ * NKYS Tube Pro — 単一HTML配信 + CORS/レンジ対応プロキシ
+ * Vercel / Render / Railway で共通に動作（依存パッケージなし）
  */
 const http = require("http");
 const https = require("https");
@@ -10,19 +10,17 @@ const path = require("path");
 const { URL } = require("url");
 
 const PORT = process.env.PORT || 3000;
-const INDEX = path.join(__dirname, "index.html");
+const INDEX = path.join(__dirname, "public", "index.html");
 
 /* プロキシを許可するホスト（Invidious 系のみ / SSRF 対策） */
 const ALLOW = [
   /(^|\.)omada\.cafe$/i, /(^|\.)nadeko\.net$/i, /(^|\.)nerdvpn\.de$/i, /(^|\.)jing\.rocks$/i,
   /(^|\.)yewtu\.be$/i, /(^|\.)privacyredirect\.com$/i, /(^|\.)materialio\.us$/i,
-  /(^|\.)melmac\.space$/i, /(^|\.)reallyaweso\.me$/i, /(^|\.)googlevideo\.com$/i,
-  /(^|\.)ytimg\.com$/i, /(^|\.)siawase\.online$/i, /(^|\.)siatube\.uk$/i,
+  /(^|\.)melmac\.space$/i, /(^|\.)reallyaweso\.me$/i, /(^|\.)googlevideo\.com$/i, /(^|\.)ytimg\.com$/i,
 ];
 const allowed = (h) => ALLOW.some((r) => r.test(h));
 
-function proxy(req, res, target, depth = 0) {
-  if (depth > 5) { res.writeHead(508).end("too many redirects"); return; }
+function proxy(req, res, target) {
   let u;
   try { u = new URL(target); } catch (_) { res.writeHead(400).end("bad url"); return; }
   if (u.protocol !== "https:" || !allowed(u.hostname)) { res.writeHead(403).end("host not allowed"); return; }
@@ -33,7 +31,7 @@ function proxy(req, res, target, depth = 0) {
   const upstream = https.request(u, { method: req.method === "HEAD" ? "HEAD" : "GET", headers }, (r) => {
     if (r.statusCode >= 300 && r.statusCode < 400 && r.headers.location) {
       r.resume();
-      return proxy(req, res, new URL(r.headers.location, u).toString(), depth + 1);
+      return proxy(req, res, new URL(r.headers.location, u).toString());
     }
     const out = { "access-control-allow-origin": "*", "cache-control": "public, max-age=60" };
     ["content-type", "content-length", "content-range", "accept-ranges", "last-modified"].forEach((k) => {
@@ -72,8 +70,10 @@ const handler = (req, res) => {
   });
 };
 
+/* Vercel などのサーバーレス環境ではハンドラをエクスポート */
 module.exports = handler;
 
+/* 直接実行時（ローカル / Render / Railway）のみポートを listen */
 if (require.main === module) {
   http.createServer(handler).listen(PORT, () =>
     console.log("NKYS Tube Pro on http://localhost:" + PORT)

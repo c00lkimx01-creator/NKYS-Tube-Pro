@@ -1,12 +1,11 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": null,
-  "buildCommand": null,
-  "outputDirectory": ".",
-  "rewrites": [
-    { "source": "/health", "destination": "/api/health" },
-    { "source": "/px", "destination": "/api/public/px" },
-    { "source": "/api/px", "destination": "/api/public/px" },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
-  ]
+  "version": 2,
+  "builds": [
+    {
+      "src": "server.js",
+      "use": "@vercel/node",
+      "config": { "includeFiles": ["public/**"] }
+    }
+  ],
+  "routes": [{ "src": "/(.*)", "dest": "server.js" }]
 }
