@@ -1190,8 +1190,16 @@ function fetchJson(base, path, signal, timeout) {
   if (signal) signal.addEventListener("abort", onA, { once: true });
   const t = setTimeout(() => c.abort(), timeout || 7000);
   const t0 = performance.now();
-  return fetch(px(base + path), { headers: { Accept: "application/json" }, signal: c.signal })
-    .then((r) => { if (!r.ok) throw new Error(r.status + " " + base); return r.json(); })
+  const raw = base + path;
+  const get = (u) => fetch(u, { headers: { Accept: "application/json" }, signal: c.signal })
+    .then((r) => { if (!r.ok) throw new Error(r.status + " " + base); return r.json(); });
+  /* プロキシが使えない環境（静的ホスティング等）では自動的に直接取得へフォールバック */
+  const first = USE_PROXY ? get(px(raw)) : get(jaParams(raw));
+  return first
+    .catch((e) => {
+      if (isAbort(e) || !USE_PROXY) throw e;
+      return get(jaParams(raw));
+    })
     .then((j) => { ok(base, performance.now() - t0); return j; })
     .catch((e) => { if (!isAbort(e)) bad(base); throw e; })
     .finally(() => { clearTimeout(t); if (signal) signal.removeEventListener("abort", onA); });
