@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="ja">
 <head>
@@ -11,6 +12,8 @@
 <meta name="twitter:card" content="summary_large_image" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='22' y='5' rx='6' fill='%23ff0033'/%3E%3Cpath d='M13 11l8 5-8 5z' fill='%23fff'/%3E%3C/svg%3E" />
 <!-- 動画表示を高速化するための事前接続 -->
+<link rel="preconnect" href="https://dark-sun-c226.c00lkimx01.workers.dev" crossorigin />
+<link rel="dns-prefetch" href="https://dark-sun-c226.c00lkimx01.workers.dev" />
 <link rel="preconnect" href="https://api.piped.private.coffee" crossorigin />
 <link rel="dns-prefetch" href="https://api.piped.private.coffee" />
 <link rel="preconnect" href="https://i.ytimg.com" crossorigin />
@@ -20,6 +23,8 @@
 <link rel="preconnect" href="https://yt.omada.cafe" crossorigin />
 <link rel="dns-prefetch" href="https://yt.omada.cafe" />
 <link rel="preconnect" href="https://siatube.com" crossorigin />
+<link rel="preconnect" href="https://ytapi-btpnydgm.manus.space" crossorigin />
+<link rel="dns-prefetch" href="https://ytapi-btpnydgm.manus.space" />
 <link rel="preconnect" href="https://inv.nadeko.net" crossorigin />
 <link rel="preconnect" href="https://pipedapi.kavin.rocks" crossorigin />
 <link rel="dns-prefetch" href="https://pipedapi.kavin.rocks" />
@@ -69,6 +74,11 @@ header{position:fixed;top:0;left:0;right:0;height:var(--hdr);display:flex;align-
   border-radius:0;background:var(--chip);display:grid;place-items:center;cursor:pointer}
 .searchbox button[type="submit"]:hover{background:var(--bg-hover)}
 .searchbox button[type="submit"] svg{width:22px;height:22px;fill:currentColor}
+/* 検索クリア（×）ボタン: 文字があるときだけ表示 */
+.searchbox .clear-q{width:40px;flex:none;border:0;background:transparent;color:var(--fg);display:grid;place-items:center;cursor:pointer}
+.searchbox .clear-q:hover{color:var(--fg);background:var(--bg-hover)}
+.searchbox .clear-q svg{width:20px;height:20px;fill:currentColor}
+.searchbox .clear-q[hidden]{display:none}
 .searchbox .voice-search{width:40px;height:40px;flex:none;margin-left:8px;border:0;
   border-radius:50% !important;background:var(--chip);color:var(--chip-on);display:grid;place-items:center;cursor:pointer}
 .searchbox .voice-search:hover{background:var(--bg-hover)}
@@ -324,6 +334,21 @@ video,#playerWrap iframe{border-radius:0}
 .player-more-menu button:hover{background:var(--bg-hover)}
 .player-more-menu button[aria-checked="true"]{color:var(--blue);font-weight:600}
 .player-more-menu button[aria-checked="true"]::after{content:"✓";font-size:14px}
+.player-more-menu .pm-sep{height:1px;background:var(--line);margin:6px 4px}
+.player-more-menu .pm-label{padding:8px 12px 4px;font-size:12px;color:var(--fg-dim);font-weight:600}
+.player-more-menu button.on{color:var(--blue);font-weight:600}
+.player-more-menu button.on::after{content:"✓";font-size:14px}
+
+/* ---- 動画カード右上の ⋯ メニュー ---- */
+.card .meta,.list-item .meta,.rel-item .meta{position:relative}
+.card .mtitle,.list-item .mtitle,.rel-item .mtitle{padding-right:34px}
+.card-more{position:absolute;top:0;right:0;width:36px;height:36px;border:0;border-radius:50%;background:transparent;color:var(--fg);display:grid;place-items:center;cursor:pointer;z-index:5}
+.card-more:hover{background:var(--bg-hover)}
+.card-more svg{width:20px;height:20px;fill:currentColor}
+.card-menu{position:absolute;z-index:90;min-width:200px;padding:6px;background:var(--bg-elev);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.card-menu button{display:flex;width:100%;align-items:center;gap:12px;padding:10px 12px;border:0;border-radius:6px;background:transparent;color:var(--fg);font-size:14px;text-align:left;cursor:pointer;white-space:nowrap}
+.card-menu button:hover{background:var(--bg-hover)}
+.card-menu button svg{width:20px;height:20px;fill:currentColor;flex:none}
 
 /* ---- チャンネルページ（YouTube 風） ---- */
 .chBanner{width:100%;aspect-ratio:6.23/1;object-fit:cover;border-radius:var(--radius);background:linear-gradient(120deg,var(--bg-hover),var(--bg-elev));display:block}
@@ -404,7 +429,8 @@ video,#playerWrap iframe{border-radius:0}
 .ghost-row .g-line{height:16px;margin-bottom:10px;border-radius:6px}
 @media(max-width:900px){.ghost-row{flex-direction:column}.ghost-row .g-thumb{width:100%}}
 .ghost-shelf{display:flex;gap:12px;overflow:hidden}
-.ghost-shelf .g-s{width:160px;flex:none;aspect-ratio:9/16;border-radius:var(--radius)}
+.ghost-shelf .g-s{width:200px;flex:none;aspect-ratio:9/16;border-radius:var(--radius)}
+@media(max-width:640px){.ghost-shelf .g-s{width:52vw}}
 .ghost-ch{display:flex;gap:16px;align-items:center;padding:12px 0}
 .ghost-ch .g-av{width:88px;height:88px;border-radius:50%;flex:none}
 /* 関連動画のゴーストスクリーン */
@@ -419,7 +445,7 @@ body.theater .ghost-rel{display:grid;grid-template-columns:repeat(auto-fill,minm
 .home-ghost{content-visibility:auto;contain:layout paint style}
 .home-ghost .ghost-short-shelf{display:contents}
 .home-ghost .shelf-scroll:has(.ghost-short-shelf){gap:12px;overflow:hidden;padding-bottom:2px}
-.home-ghost .ghost-short{width:160px;flex:0 0 160px;aspect-ratio:9/16;border-radius:var(--radius)}
+.home-ghost .ghost-short{width:200px;flex:0 0 200px;aspect-ratio:9/16;border-radius:var(--radius)}
 .home-ghost .ghost-video-shelf{display:flex;gap:16px;overflow:hidden;padding:2px 2px 16px}
 .home-ghost .ghost-video-card{width:280px;flex:0 0 280px}
 .home-ghost .home-video-shelf:has(.ghost-video-shelf){gap:16px;overflow:hidden;padding:2px 2px 16px}
@@ -431,6 +457,15 @@ body.theater .ghost-rel{display:grid;grid-template-columns:repeat(auto-fill,minm
 .home-ghost .ghost-grid{display:contents}
 .home-ghost .ghost-grid-card .ghost-video-thumb{width:100%}
 @media(max-width:640px){.home-ghost .ghost-video-card{width:240px;flex-basis:240px}}
+@media(max-width:640px){.home-ghost .ghost-short{width:52vw;flex-basis:52vw}}
+/* Shortsページのゴーストスクリーン（実際のショート画面と同じレイアウト） */
+.shorts-ghost{position:relative;height:calc(100vh - var(--hdr));display:grid;place-items:center;overflow:hidden}
+.shorts-ghost .sg-frame{width:min(420px,94vw);height:92%;border-radius:12px}
+.shorts-ghost .sg-actions{position:absolute;right:max(16px,calc(50% - 250px));bottom:15%;display:flex;flex-direction:column;gap:18px}
+.shorts-ghost .sg-btn{width:44px;height:44px;border-radius:50%}
+.shorts-ghost .sg-meta{position:absolute;left:max(16px,calc(50% - 200px));bottom:8%;width:min(320px,60vw)}
+.shorts-ghost .sg-line{height:14px;margin-bottom:10px;border-radius:6px}
+@media(max-width:640px){.shorts-ghost .sg-actions{right:12px}.shorts-ghost .sg-meta{left:12px}}
 @media(prefers-reduced-motion:reduce){.skel{animation:none;background:var(--bg-elev)}}
 
 /* --- 検索結果: チャンネル行 --- */
@@ -905,6 +940,7 @@ dialog,
   <div class="hcenter">
     <form class="searchbox" id="searchForm">
       <div class="sfield"><input id="q" type="text" placeholder="検索" autocomplete="off" />
+      <button type="button" class="clear-q" id="btnClearQ" aria-label="検索をクリア" title="クリア" hidden><svg viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
       <button type="submit" aria-label="検索"><svg viewBox="0 0 24 24"><path d="M16.296 16.996a8 8 0 11.707-.708l3.909 3.91-.707.707-3.909-3.909zM18 11a7 7 0 00-14 0 7 7 0 1014 0z"/></svg></button></div>
       <button type="button" class="voice-search" id="btnVoiceSearch" aria-label="音声検索" title="音声検索"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button>
     </form>
@@ -1021,10 +1057,13 @@ dialog,
    その他: Invidious インスタンスを役割別に分担（検索/急上昇/メタ/コメント/チャンネル）
    ===================================================================== */
 
-const STREAM_PRIMARY = "https://yt.omada.cafe";
+/* 自前 Cloudflare Worker (Invidious 互換 API) を最優先 */
+const WORKER_API = "https://dark-sun-c226.c00lkimx01.workers.dev";
+const STREAM_PRIMARY = WORKER_API;
 
 /* Invidious ストリーム取得の主力 */
 const INV_STREAM = [
+  WORKER_API,
   "https://yt.omada.cafe",
   "https://inv.nadeko.net",
   "https://invidious.nerdvpn.de",
@@ -1044,6 +1083,7 @@ const PIPED = [
 
 /* Invidious（検索 / メタ / コメント / チャンネル） */
 const INV_ALL = [
+  WORKER_API,
   "https://yt.omada.cafe",
   "https://inv.nadeko.net",
   "https://invidious.nerdvpn.de",
@@ -1070,6 +1110,9 @@ const FALLBACK_ALL = [...new Set(Object.values(POOLS).flat())];
 
 /* siatube API（検索 / ショート / チャンネル取得の第3ソース） */
 const SIA = "https://siatube.com";
+
+/* ytapi (ytapi-btpnydgm.manus.space): 検索 / 急上昇 / 動画メタ情報の追加ソース */
+const YTA = "https://ytapi-btpnydgm.manus.space";
 
 /* ---------------- storage ---------------- */
 const LS = {
@@ -1119,7 +1162,20 @@ const isAbort = (e) => e && (e.name === "AbortError" || /abort/i.test(e.message 
 
 /* ---------------- network core ---------------- */
 let USE_PROXY = S.settings.proxy;
-const px = (u) => (USE_PROXY ? "/px?u=" + encodeURIComponent(u) : u);
+/* 日本語のタイトル / 概要欄が返るよう hl / gl / region を必ず付与する */
+function jaParams(u) {
+  if (/\/api\/v1\/|\/search|\/trending|\/streams\/|\/channel|\/comments/.test(u)) {
+    const sep = u.includes("?") ? "&" : "?";
+    const add = [];
+    if (!/[?&]hl=/.test(u)) add.push("hl=ja");
+    if (!/[?&]gl=/.test(u)) add.push("gl=JP");
+    if (!/[?&]region=/.test(u)) add.push("region=" + RG());
+    if (add.length) return u + sep + add.join("&");
+  }
+  return u;
+}
+const px = (u) => (USE_PROXY ? "/api/public/px?u=" + encodeURIComponent(jaParams(u)) : jaParams(u));
+
 
 const hRec = (b) => (S.health[b] || (S.health[b] = { fail: 0, ms: 1200 }));
 let hTimer;
@@ -1235,13 +1291,17 @@ async function getVideo(id, signal) {
       .catch(() => null);
     const invP = race(POOLS.stream, path + "?local=true", signal, { wave: 5, timeouts: [4500, 8000] })
       .catch(() => race(POOLS.video, path, signal, { wave: 6, timeouts: [8000] }).catch(() => null));
+    /* ytapi: ストリームを持たないため、両方失敗時のメタ情報フォールバックとして併走 */
+    const ytaP = ytaVideo(id, signal).catch(() => null);
 
     const inv = await invP;
     if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
     if (hasStreams(inv)) { cache.set(key, { v: inv, at: Date.now() }); return inv; }
     const piped = await pipedP;
     if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
-    const v = hasStreams(piped) ? piped : (inv || piped);
+    const yta = await ytaP;
+    if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
+    const v = hasStreams(piped) ? piped : (inv || piped || yta);
     if (!v) throw new Error("video unavailable");
     cache.set(key, { v, at: Date.now() });
     return v;
@@ -1399,6 +1459,133 @@ async function siaSearch(q, signal, shorts) {
 }
 async function siaChannel(cid, signal) { return siaGet("/api/channel/" + encodeURIComponent(cid), signal); }
 
+/* 視聴ページ用: siatube の /api/video/{videoid} を Invidious 形式へ正規化
+   （タイトル / 概要欄 / 関連動画 をこのAPIから取得する） */
+function normSiaRelated(it) {
+  const id = it.videoId || vidOf(it);
+  return {
+    type: /playlist/i.test(it.type || "") && !id ? "playlist" : "video",
+    videoId: id,
+    title: it.title || "",
+    author: it.channelName || it.author || "",
+    authorId: it.channelId || it.authorId || "",
+    authorThumbnails: it.channelAvatar ? [{ url: it.channelAvatar }] : [],
+    lengthSeconds: siaDur(it.duration),
+    viewCount: siaNum(it.viewCountText || it.viewCount),
+    publishedText: it.publishedTimeText || it.publishedTime || "",
+    liveNow: /live/i.test(String(it.badge || "")),
+    __thumb: siaThumb(it),
+  };
+}
+async function siaWatch(id, signal) {
+  const d = await siaGet("/api/video/" + encodeURIComponent(id), signal);
+  if (!d || (!d.title && !d.id)) throw new Error("sia video empty");
+  const rel = (d["Related-videos"] && d["Related-videos"].relatedVideos) || d.relatedVideos || [];
+  const desc = d.description || {};
+  const st = d.extended_stats || {};
+  return {
+    videoId: d.id || id,
+    title: d.title || "",
+    description: typeof desc === "string" ? desc : (desc.text || String(desc.formatted || "").replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "")),
+    viewCount: siaNum(st.views_original || d.views),
+    publishedText: d.relativeDate || st.date_relative_label || st.date_simple || "",
+    likeCount: siaNum(d.likes),
+    author: (d.author && d.author.name) || "",
+    authorId: (d.author && d.author.id) || "",
+    subCountText: (d.author && d.author.subscribers) || "",
+    authorThumbnails: d.author && d.author.thumbnail ? [{ url: d.author.thumbnail }] : [],
+    recommendedVideos: rel.map(normSiaRelated).filter((r) => r.videoId),
+  };
+}
+/* コメント: siatube /api/comments?videoId={videoid} */
+async function siaComments(id, signal) {
+  const d = await siaGet("/api/comments?videoId=" + encodeURIComponent(id) + "&sort=top", signal);
+  const list = (d && d.comments) || [];
+  return {
+    commentCount: siaNum(d && d.CommentsCount),
+    comments: list.filter((c) => !c.replyLevel).map((c) => ({
+      author: (c.author && c.author.name) || "",
+      authorId: (c.author && c.author.channelId) || "",
+      authorThumbnails: c.author && c.author.avatar ? [{ url: c.author.avatar }] : [],
+      content: c.text || "",
+      publishedText: c.publishedTime || "",
+      likeCount: (c.likes && (c.likes.count || siaNum(c.likes.text))) || 0,
+      replies: c.replies && c.replies.count ? { replyCount: c.replies.count } : undefined,
+    })),
+  };
+}
+
+
+
+/* ---------------- ytapi ---------------- */
+async function ytaGet(path, signal) { return fetchJson(YTA, path, signal, 9000); }
+/* ytapi の item を Invidious 形式へ正規化（配信終了済み動画はLIVE扱いにしない） */
+function normYtaVideo(it) {
+  const vc = it.viewCount;
+  return {
+    type: "video",
+    videoId: it.id || it.videoId || vidOf(it),
+    title: it.title || "",
+    author: (it.channel && it.channel.name) || it.author || "",
+    authorId: (it.channel && it.channel.id) || it.authorId || "",
+    lengthSeconds: siaDur(it.duration),
+    viewCount: siaNum(vc && vc.text != null ? vc.text : vc),
+    publishedText: it.published || "",
+    description: it.description || "",
+    isShort: !!it.isShort,
+    liveNow: false,
+    __thumb: typeof it.thumbnail === "string" ? it.thumbnail : "",
+  };
+}
+const ytaResults = (d) => ((d && d.data && d.data.results) || (d && d.results) || []).map(normYtaVideo);
+/* 検索: /api/v1/search?q={keyword} */
+async function ytaSearch(q, signal) { return ytaResults(await ytaGet("/api/v1/search?q=" + encodeURIComponent(q), signal)); }
+/* 急上昇: /api/v1/trend?jp と /api/v1/trend の両方を取得して統合 */
+async function ytaTrend(signal) {
+  const rs = await Promise.allSettled([
+    ytaGet("/api/v1/trend?jp", signal),
+    ytaGet("/api/v1/trend", signal),
+  ]);
+  const out = [], seen = new Set();
+  for (const r of rs) {
+    if (r.status !== "fulfilled") continue;
+    for (const v of ytaResults(r.value)) {
+      const id = vidOf(v);
+      if (!id || seen.has(id)) continue;
+      seen.add(id); out.push(v);
+    }
+  }
+  if (!out.length) throw new Error("yta trend unavailable");
+  return out;
+}
+/* チャンネル情報: /api/v1/channel/{channelID} */
+async function ytaChannel(cid, signal) {
+  const d = await ytaGet("/api/v1/channel/" + encodeURIComponent(cid), signal);
+  const c = (d && (d.data || d)) || null;
+  if (!c) return null;
+  const info = c.channel || c.info || c;
+  const list = c.videos || c.results || (c.data && c.data.results) || [];
+  return {
+    name: info.name || info.title || info.author || "",
+    description: info.description || "",
+    avatar: info.avatar || info.thumbnail || (info.avatars && info.avatars[0] && info.avatars[0].url) || "",
+    banner: info.banner || (info.banners && info.banners[0] && info.banners[0].url) || "",
+    subCount: siaNum((info.subscriberCount && info.subscriberCount.text) || info.subscriberCount || info.subscribers),
+    verified: !!info.verified,
+    videos: (Array.isArray(list) ? list : []).map(normYtaVideo).filter((v) => v.videoId),
+  };
+}
+/* 動画メタ情報: /api/v1/video/{videoid}（ストリームを持たないためメタ専用） */
+async function ytaVideo(id, signal) {
+  const d = await ytaGet("/api/v1/video/" + encodeURIComponent(id), signal);
+  const it = d && (d.data || d);
+  if (!it || !(it.id || it.title)) return null;
+  const v = normYtaVideo(it);
+  v.videoId = id;
+  v.lengthSeconds = siaDur(it.duration);
+  return v;
+}
+
 /* 動画IDを確実に取得する（Piped/Invidious/shorts URL いずれにも対応） */
 function vidOf(v) {
   if (!v) return "";
@@ -1413,8 +1600,13 @@ function vidOf(v) {
 }
 const isShortVid = (v) => !!v.isShort || (v.lengthSeconds > 0 && v.lengthSeconds <= 180);
 /* ライブ判定: Invidious は liveNow / Piped は duration<=0 かつ views あり */
-const isLive = (v) => !!(v && (v.liveNow || v.isLive || v.live || v.type === "livestream" ||
-  (v.hlsUrl && !(v.lengthSeconds > 0)) || (v.lengthSeconds === 0 && v.publishedText === "LIVE")));
+/* 配信終了済み（再生時間が確定している）動画はLIVEと表示しない */
+const isLive = (v) => {
+  if (!v) return false;
+  if (v.lengthSeconds > 0) return false;
+  return !!(v.liveNow || v.isLive || v.live || v.type === "livestream" ||
+    (v.hlsUrl && !(v.lengthSeconds > 0)) || (v.lengthSeconds === 0 && v.publishedText === "LIVE"));
+};
 
 /* ---------------- router ---------------- */
 const nav = { abort: null };
@@ -1541,16 +1733,48 @@ function videoCard(v, mode, idx) {
   card.innerHTML =
     '<div class="thumb"><img ' + ld + ' decoding="async" width="480" height="270" src="' +
       esc(thumbUrl(v, mode ? "m" : "h")) + '" alt="">' + dur + "</div>" +
-    '<div class="meta">' + (mode === "list" ? "" : av) + "<div style=\"min-width:0\">" +
+    '<div class="meta">' + (mode === "list" ? "" : av) + "<div style=\"min-width:0;flex:1\">" +
       '<div class="mtitle">' + esc(v.title) + "</div>" +
       channel +
       '<div class="msub">' + (v.viewCount ? fmtNum(v.viewCount) + "回視聴・" : "") + esc(v.publishedText || ago(v.published)) + "</div>" +
       desc +
-    "</div></div>";
+    "</div>" +
+    '<button class="card-more" type="button" aria-label="その他" title="その他"><svg viewBox="0 0 24 24"><path d="M12 8a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4z"/></svg></button></div>';
+  const moreBtn = card.querySelector(".card-more");
+  moreBtn.onclick = (e) => { e.stopPropagation(); openCardMenu(moreBtn, v); };
   card.onclick = () => go("/watch?v=" + id);
   card.addEventListener("pointerenter", () => prefetchVideo(id), { once: true });
   card.addEventListener("touchstart", () => prefetchVideo(id), { once: true, passive: true });
   return card;
+}
+/* カード右上の ⋯ メニュー: 後で見る / 再生リストに保存 / 共有 */
+let cardMenuEl = null;
+function closeCardMenu() { if (cardMenuEl) { cardMenuEl.remove(); cardMenuEl = null; } }
+function openCardMenu(btn, v) {
+  closeCardMenu();
+  const m = el("div", "card-menu");
+  m.innerHTML =
+    '<button type="button" data-a="later"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 110 18 9 9 0 010-18zm0 1a8 8 0 100 16 8 8 0 000-16zm.5 4v4.7l3.9 2.3.6-1-3.5-2.05V8h-1z"/></svg>後で見る</button>' +
+    '<button type="button" data-a="save"><svg viewBox="0 0 24 24"><path d="M4 5h16v2H4zm0 6h10v2H4zm0 6h10v2H4zm14-6v6l5-3z"/></svg>再生リストに保存</button>' +
+    '<button type="button" data-a="share"><svg viewBox="0 0 24 24"><path d="M14 9V5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11z"/></svg>共有</button>';
+  document.body.appendChild(m);
+  const r = btn.getBoundingClientRect();
+  m.style.top = (r.bottom + window.scrollY + 4) + "px";
+  m.style.left = Math.max(8, Math.min(r.left + window.scrollX - 160, window.scrollX + document.documentElement.clientWidth - 210)) + "px";
+  m.onclick = async (e) => {
+    e.stopPropagation();
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.a === "later") { toggleList("later", v); toast("後で見るを更新しました"); }
+    if (b.dataset.a === "save") savePlaylistPrompt(v);
+    if (b.dataset.a === "share") {
+      const url = location.origin + "/watch?v=" + (v.videoId || v.id);
+      if (navigator.share) { try { await navigator.share({ title: v.title, url }); } catch (_) {} }
+      else { navigator.clipboard.writeText(url); toast("リンクをコピーしました"); }
+    }
+    closeCardMenu();
+  };
+  cardMenuEl = m;
+  setTimeout(() => document.addEventListener("click", closeCardMenu, { once: true }), 0);
 }
 function renderGrid(list, mode) {
   const wrap = el("div", mode === "list" ? "" : "grid");
@@ -1564,50 +1788,41 @@ function renderGrid(list, mode) {
 const HOME_CHIPS = ["すべて", "音楽", "ゲーム", "ニュース", "ライブ", "アニメ", "スポーツ", "料理", "学習", "テクノロジー", "コメディ"];
 let homeChip = "すべて";
 
-/* Home: Piped と Invidious を同時取得し、片方の障害でも表示を継続 */
+/* Home: siatube / Invidious / Piped / ytapi の4ソースを同時取得し、
+   先到着・マージで表示。片方の障害でも他ソースでカバーする */
 async function homeFeed(chip, signal) {
   const q = chip === "すべて" ? "" : chip;
-  const invPath = q
-    ? "/api/v1/search?q=" + encodeURIComponent(q) + "&type=video&region=" + RG() + "&sort_by=relevance"
-    : "/api/v1/trending?region=" + RG() + "";
   const pipedPath = q
     ? "/search?q=" + encodeURIComponent(q) + "&filter=videos"
-    : "/trending?region=" + RG() + "";
-  /* 先到着したソースで即座に返し、もう片方は1.5秒だけ待ってマージ。
-     遅い/落ちているソースが全体の表示を遅らせないようにする */
-  let invResult = null, pipedResult = null, siaResult = null;
-  const t1 = api(q ? "search" : "trending", invPath, { signal })
-    .then((v) => { invResult = { status: "fulfilled", value: v }; })
-    .catch((e) => { invResult = { status: "rejected", reason: e }; });
-  const t2 = pipedGet(pipedPath, signal)
+    : "/trending?region=" + RG();
+  let pipedResult = null, ytaResult = null;
+  const t1 = pipedGet(pipedPath, signal)
     .then((v) => { pipedResult = { status: "fulfilled", value: v }; })
     .catch((e) => { pipedResult = { status: "rejected", reason: e }; });
-  /* Siatube は現在も安定して応答するため、ホーム一覧の独立した取得元として常時併用する。 */
-  const siaQuery = q || "おすすめ";
-  const t3 = siaSearch(siaQuery, signal, false)
-    .then((v) => { siaResult = { status: "fulfilled", value: v }; })
-    .catch((e) => { siaResult = { status: "rejected", reason: e }; });
+  const t2 = (q ? ytaSearch(q, signal) : ytaTrend(signal))
+    .then((v) => { ytaResult = { status: "fulfilled", value: v }; })
+    .catch((e) => { ytaResult = { status: "rejected", reason: e }; });
   await Promise.race([
-    Promise.all([t1, t2, t3]),
-    Promise.race([t1, t2, t3]).then(() => new Promise((r) => setTimeout(r, 1500))),
+    Promise.all([t1, t2]),
+    Promise.race([t1, t2]).then(() => new Promise((r) => setTimeout(r, 1500))),
     new Promise((r) => setTimeout(r, 12000)),
   ]);
-  if (signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
-  const merged = [];
-  const seen = new Set();
+  if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
+  const merged = [], seen = new Set();
   const add = (v) => {
     const id = vidOf(v);
     if (!id || seen.has(id)) return;
-    seen.add(id); merged.push(v);
+    v.videoId = id; seen.add(id); merged.push(v);
   };
-  if (invResult && invResult.status === "fulfilled") (invResult.value || []).filter((v) => v.type === "video" || v.type === "shortVideo" || v.videoId).forEach(add);
   if (pipedResult && pipedResult.status === "fulfilled") {
-    const items = Array.isArray(pipedResult.value) ? pipedResult.value : (pipedResult.value?.items || []);
-    items.filter((v) => v.type === "stream" || v.videoId || v.url).map((v) => v.videoId ? v : normPipedVideo(v)).forEach(add);
+    const items = Array.isArray(pipedResult.value) ? pipedResult.value : ((pipedResult.value && (pipedResult.value.items || pipedResult.value.relatedStreams)) || []);
+    items.filter((v) => v && (v.type === "stream" || v.videoId || v.url))
+      .map((v) => (v.videoId ? v : normPipedVideo(v)))
+      .filter((v) => v.videoId)
+      .forEach(add);
   }
-  if (siaResult && siaResult.status === "fulfilled") {
-    const items = Array.isArray(siaResult.value) ? siaResult.value : (siaResult.value?.items || []);
-    items.filter((v) => v.type === "video" || v.type === "stream" || v.videoId || v.url).map(normSiaVideo).forEach(add);
+  if (ytaResult && ytaResult.status === "fulfilled") {
+    (ytaResult.value || []).filter((v) => v && v.videoId).forEach(add);
   }
   if (!merged.length) throw new Error("Home feed unavailable");
   return merged;
@@ -1636,6 +1851,43 @@ async function pageHome() {
 
   root.appendChild(recSec);
 
+  /* おすすめ棚: 右端まで横スクロールしたら追加読み込み */
+  const recSeen = new Set();
+  const recQueries = (homeChip !== "すべて" ? [homeChip] : []).concat(historyQueries(6));
+  if (!recQueries.length) recQueries.push("おすすめ", "人気の動画", "急上昇");
+  let recLoading = false, recPage = 0, recExhausted = false;
+  const loadMoreRecs = async () => {
+    if (recLoading || recExhausted || !recShelf.isConnected) return;
+    if (!recShelf.children.length || recShelf.getAttribute("aria-busy")) return;
+    recLoading = true;
+    recPage++;
+    const q = recQueries[(recPage - 1) % recQueries.length];
+    const page = Math.ceil(recPage / recQueries.length) + 1;
+    try {
+      const res = await Promise.allSettled([
+        api("search", "/api/v1/search?q=" + encodeURIComponent(q) + "&type=video&region=" + RG() + "&page=" + page, { signal }),
+        ytaSearch(q + (page > 1 ? " " + page : ""), signal),
+      ]);
+      let added = 0;
+      res.forEach((r) => {
+        if (r.status !== "fulfilled") return;
+        (Array.isArray(r.value) ? r.value : (r.value && r.value.items) || []).forEach((v) => {
+          if (v.type && v.type !== "video" && v.type !== "shortVideo") return;
+          const id = vidOf(v);
+          if (!id || recSeen.has(id)) return;
+          recSeen.add(id); v.videoId = id;
+          recShelf.appendChild(videoCard(v, null, recShelf.children.length));
+          added++;
+        });
+      });
+      if (!added && page > 3) recExhausted = true;
+    } catch (_) {}
+    recLoading = false;
+  };
+  recShelf.addEventListener("scroll", () => {
+    if (recShelf.scrollLeft + recShelf.clientWidth > recShelf.scrollWidth - 600) loadMoreRecs();
+  }, { passive: true });
+
     const normalSec = el("section", "home-section home-ghost");
   normalSec.innerHTML = '<div class="home-section-head"><h2>動画</h2></div>';
   const normalBox = el("div", "grid");
@@ -1647,9 +1899,7 @@ async function pageHome() {
 
   const signal = nav.abort.signal;
   /* Short棚: 登録チャンネルのショート → 検索履歴ベース */
-  const shortsPromise = fetchSubsShorts(signal, 4)
-    .then((subShorts) => (subShorts.length ? subShorts : fetchShorts(personalShortQueries().slice(0, 3), signal)))
-    .catch(() => fetchShorts(personalShortQueries().slice(0, 3), signal));
+  const shortsPromise = fetchSubsShorts(signal, 6).catch(() => []);
   const trendPromise = homeFeed(homeChip, signal);
 
   shortsPromise.then((items) => {
@@ -1658,7 +1908,11 @@ async function pageHome() {
     shortShelf.removeAttribute("aria-busy");
     (items || []).slice(0, 12).forEach((v) => shortShelf.appendChild(shortCard(v)));
 
-    if (!shortShelf.children.length) shortSec.remove();
+    if (!shortShelf.children.length) {
+      shortShelf.appendChild(el("div", "empty", (S.subs || []).length
+        ? "登録チャンネルのショートが見つかりませんでした"
+        : "チャンネルを登録すると、ここにショートが表示されます"));
+    }
   }).catch(() => shortSec.remove());
 
   /* 前回取得したフィードを即座に描画し、裏で最新に更新（SWR） */
@@ -1669,36 +1923,29 @@ async function pageHome() {
     if (signal.aborted || !list || !list.length) return false;
     recShelf.innerHTML = "";
     recShelf.removeAttribute("aria-busy");
-    list.slice(0, 12).forEach((v, i) => recShelf.appendChild(videoCard(v, null, i)));
+    list.slice(0, 12).forEach((v, i) => { const id = vidOf(v); if (id) recSeen.add(id); recShelf.appendChild(videoCard(v, null, i)); });
     recFilled = recShelf.children.length > 0;
     return recFilled;
   };
-  if (homeChip === "すべて") {
-    Promise.all([
-      fetchSubsVideos(signal, 6).catch(() => []),
-      fetchHistoryRecs(signal, 20).catch(() => []),
-    ]).then(([subsV, histV]) => {
-      const out = [], seen = new Set();
-      subsV.concat(histV).forEach((v) => {
-        const id = vidOf(v);
-        if (!id || seen.has(id)) return;
-        seen.add(id); out.push(v);
-      });
-      paintRec(out);
-    }).catch(() => {});
-  }
+  /* おすすめ棚: 登録チャンネルの動画のみ */
+  fetchSubsVideos(signal, 6).catch(() => []).then((subsV) => {
+    if (signal.aborted) return;
+    if (!paintRec(subsV)) {
+      recShelf.innerHTML = "";
+      recShelf.removeAttribute("aria-busy");
+      recFilled = true;
+      recExhausted = true;
+      recShelf.appendChild(el("div", "empty", (S.subs || []).length
+        ? "登録チャンネルの動画を取得できませんでした"
+        : "チャンネルを登録すると、ここにおすすめが表示されます"));
+    }
+  });
   const paintFeed = (data) => {
     if (signal.aborted) return;
     const videos = (data || []).filter((v) => (v.type ? v.type === "video" || v.type === "shortVideo" : true) && (v.videoId || v.id));
-    if (!recFilled) {
-      recShelf.innerHTML = "";
-      recShelf.removeAttribute("aria-busy");
-      (videos || []).slice(0, 10).forEach((v, i) => recShelf.appendChild(videoCard(v, null, i)));
-      if (!recShelf.children.length) recSec.remove();
-    }
     normalBox.innerHTML = "";
     normalBox.removeAttribute("aria-busy");
-    videos.slice(recFilled ? 0 : 10).forEach((v, i) => normalBox.appendChild(videoCard(v, null, i + 10)));
+    videos.forEach((v, i) => normalBox.appendChild(videoCard(v, null, i)));
 
     if (!normalBox.children.length) normalBox.appendChild(el("div", "empty", "動画が見つかりませんでした"));
   };
@@ -1709,7 +1956,6 @@ async function pageHome() {
     try { LS.set(feedKey, (data || []).slice(0, 40)); } catch (_) {}
   }).catch((e) => {
     if (!isAbort(e) && !signal.aborted) {
-            if (!recFilled) recSec.remove();
       normalBox.removeAttribute("aria-busy");
       normalBox.innerHTML = '<div class="empty">読み込みに失敗しました。再試行してください。</div>';
 
@@ -1815,6 +2061,9 @@ async function searchVideos(q, page, signal) {
     siaSearch(q, signal)
       .then((items) => items.filter((i) => /video|short|stream/i.test(i.type || "video")).map(normSiaVideo).forEach(push))
       .catch(() => {}),
+    ytaSearch(q, signal)
+      .then((items) => items.filter((v) => v.videoId).forEach(push))
+      .catch(() => {}),
   ];
   /* 最初のソースが返った時点＋1.5秒で打ち切り、遅いソースを待たない */
   await Promise.race([
@@ -1871,6 +2120,10 @@ async function searchShorts(q, signal, page) {
         .map(normSiaVideo)
         .forEach((v) => { v.isShort = true; push(v); }))
       .catch(() => {}),
+    /* ytapi: /api/v1/search?q={keyword} shorts */
+    ytaSearch(q + " shorts", signal)
+      .then((items) => items.filter((v) => v.isShort || isShortVid(v)).forEach((v) => { v.isShort = true; push(v); }))
+      .catch(() => {}),
   ];
   await Promise.allSettled(jobs);
   return out;
@@ -1882,6 +2135,7 @@ const searchDisplayedByQuery = new Map();
 async function pageSearch(q, page) {
   setChips(null);
   $("#q").value = q;
+  const cq0 = $("#btnClearQ"); if (cq0) cq0.hidden = !q;
   page = Math.max(1, parseInt(page, 10) || 1);
   const signal = nav.abort.signal;
 
@@ -1999,6 +2253,9 @@ async function pageWatch(id) {
 
   /* 通信は即座に開始し、表示は後回しにしない（体感速度優先） */
   const dataPromise = getVideo(id, nav.abort.signal);
+  /* タイトル / 概要欄 / 関連動画 は siatube /api/video/{videoid} を採用 */
+  const siaPromise = siaWatch(id, nav.abort.signal).catch(() => null);
+
   const guessThumb = "https://i.ytimg.com/vi/" + encodeURIComponent(id) + "/hqdefault.jpg";
   const mode0 = S.settings.playerMode === "nocookie" ? "nocookie" : "stream";
 
@@ -2011,10 +2268,6 @@ async function pageWatch(id) {
         <div class="skel" style="width:40px;height:40px;border-radius:50%"></div>
         <div style="flex:1"><div class="skel" style="height:14px;width:140px;margin-bottom:6px"></div><div class="skel" style="height:12px;width:90px"></div></div>
         <div class="actions">
-          <div class="modegroup" id="modeGroup">
-            <button class="pill" id="btnModeStream" title="独自プレーヤーで再生（高画質選択可）">ストリーム</button>
-            <button class="pill" id="btnModeNocookie" title="YouTube (nocookie) 埋め込みで再生">Nocookie</button>
-          </div>
           <select class="pill" id="qsel" title="画質" style="padding:0 10px"></select>
           <div class="player-more-wrap">
             <button class="pill player-more" id="btnPlayerMore" type="button" aria-label="その他のプレイヤー操作" aria-expanded="false" title="その他">⋯</button>
@@ -2040,10 +2293,30 @@ async function pageWatch(id) {
   let v;
   try { v = await dataPromise; }
   catch (e) {
-    if (!isAbort(e)) $("#playerWrap").innerHTML = '<div class="empty" style="color:#fff">動画を読み込めませんでした。</div>';
-    return;
+    const sx = await siaPromise;
+    if (sx) v = sx;
+    else {
+      if (!isAbort(e)) $("#playerWrap").innerHTML = '<div class="empty" style="color:#fff">動画を読み込めませんでした。</div>';
+      return;
+    }
   }
   if (nav.abort.signal.aborted) return;
+
+  /* siatube の情報でタイトル / 概要欄 / 関連動画 / 各種メタを上書き */
+  const sia = await siaPromise;
+  if (sia && !nav.abort.signal.aborted) {
+    if (sia.title) v.title = sia.title;
+    if (sia.description) v.description = sia.description;
+    if (sia.recommendedVideos && sia.recommendedVideos.length) v.recommendedVideos = sia.recommendedVideos;
+    if (sia.viewCount) v.viewCount = sia.viewCount;
+    if (sia.likeCount) v.likeCount = sia.likeCount;
+    if (sia.publishedText) v.publishedText = sia.publishedText;
+    if (sia.author) v.author = sia.author;
+    if (sia.authorId) v.authorId = v.authorId || sia.authorId;
+    if (sia.subCountText) v.subCountText = sia.subCountText;
+    if ((sia.authorThumbnails || []).length && !authorImg(v)) v.authorThumbnails = sia.authorThumbnails;
+  }
+
 
   const streams = pickStreams(v);
   const subbed = S.subs.some((s) => s.id === v.authorId);
@@ -2062,18 +2335,18 @@ async function pageWatch(id) {
         <div class="sep"></div>
         <button class="pill"><svg viewBox="0 0 24 24" style="transform:rotate(180deg)"><path d="M18.8 9H14V4.6L11 12v8h7l3-8.6zM3 12h4v8H3z"/></svg></button>
       </div>
-      <button class="pill" id="btnLater"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 100 18 9 9 0 000-18zm.5 5H11v6l4.7 2.9.8-1.3-4-2.4z"/></svg>後で見る</button>
       <button class="pill" id="btnSave">保存</button>
-      <div class="modegroup" id="modeGroup">
-        <button class="pill" id="btnModeStream" title="独自プレーヤーで再生（高画質選択可）">ストリーム</button>
-        <button class="pill" id="btnModeNocookie" title="YouTube (nocookie) 埋め込みで再生">Nocookie</button>
-      </div>
       <select class="pill" id="qsel" title="画質" style="padding:0 10px"></select>
       <div class="player-more-wrap">
         <button class="pill player-more" id="btnPlayerMore" type="button" aria-label="その他のプレイヤー操作" aria-expanded="false" title="その他">⋯</button>
         <div class="player-more-menu" id="playerMoreMenu" role="menu" hidden>
+          <button type="button" role="menuitem" data-player-action="later">後で見る</button>
           <button type="button" role="menuitem" data-player-action="theater" aria-checked="false">シアターモード</button>
           <button type="button" role="menuitem" data-player-action="pip">ミニプレーヤー</button>
+          <div class="pm-sep"></div>
+          <div class="pm-label">再生方法</div>
+          <button type="button" role="menuitem" data-player-action="mode-stream">ストリーム（高画質選択可）</button>
+          <button type="button" role="menuitem" data-player-action="mode-nocookie">Nocookie（YouTube 埋め込み）</button>
         </div>
       </div>
     </div>`;
@@ -2114,7 +2387,7 @@ async function pageWatch(id) {
     $("#btnSub").classList.toggle("solid", i >= 0);
   };
   $("#btnLike").onclick = () => { toggleList("liked", v); toast("高く評価した動画を更新しました"); };
-  $("#btnLater").onclick = () => { toggleList("later", v); toast("後で見るを更新しました"); };
+  const addLater = () => { toggleList("later", v); toast("後で見るを更新しました"); };
   const shareVideo = async () => {
     const url = location.origin + "/watch?v=" + id;
     if (navigator.share) { try { await navigator.share({ title: v.title, url }); return; } catch (_) {} }
@@ -2156,9 +2429,12 @@ async function pageWatch(id) {
     moreMenu.onclick = async (e) => {
       const item = e.target.closest("[data-player-action]");
       if (!item) return;
+      if (item.dataset.playerAction === "later") addLater();
       if (item.dataset.playerAction === "share") await shareVideo();
       if (item.dataset.playerAction === "theater") toggleTheater();
       if (item.dataset.playerAction === "pip") openPip();
+      if (item.dataset.playerAction === "mode-stream") window.__nkysSetMode && window.__nkysSetMode("stream");
+      if (item.dataset.playerAction === "mode-nocookie") window.__nkysSetMode && window.__nkysSetMode("nocookie");
       closePlayerMore();
     };
     document.addEventListener("click", (e) => {
@@ -2219,21 +2495,24 @@ function mountPlayer(mode, opt) {
 }
 
 function wireModeToggle(id, v) {
-  const bS = $("#btnModeStream"), bN = $("#btnModeNocookie"), qsel = $("#qsel");
+  /* 再生方法の切り替えは ⋯ メニュー内の項目から行う */
+  const qsel = $("#qsel");
   const sync = () => {
     const m = $("#playerWrap").dataset.mode;
-    bS.classList.toggle("on", m !== "nocookie");
-    bN.classList.toggle("on", m === "nocookie");
+    const sI = document.querySelector('[data-player-action="mode-stream"]');
+    const nI = document.querySelector('[data-player-action="mode-nocookie"]');
+    if (sI) sI.classList.toggle("on", m !== "nocookie");
+    if (nI) nI.classList.toggle("on", m === "nocookie");
     if (qsel) qsel.style.display = m === "nocookie" ? "none" : "";
   };
-  bS.onclick = () => {
-    S.settings.playerMode = "stream"; saveSettings();
-    mountPlayer("stream", { id, v, streams: window.__nkysStreams, autoFallbackTried: false });
-    sync();
-  };
-  bN.onclick = () => {
-    S.settings.playerMode = "nocookie"; saveSettings();
-    mountPlayer("nocookie", { id, v });
+  window.__nkysSetMode = (mode) => {
+    if (mode === "nocookie") {
+      S.settings.playerMode = "nocookie"; saveSettings();
+      mountPlayer("nocookie", { id, v });
+    } else {
+      S.settings.playerMode = "stream"; saveSettings();
+      mountPlayer("stream", { id, v, streams: window.__nkysStreams, autoFallbackTried: false });
+    }
     sync();
   };
   qsel && (qsel.onchange = () => {
@@ -2286,11 +2565,16 @@ function commentGhostScreen(n) {
   }
   return w;
 }
-/* コメント: Invidious → Piped の順で取得（Invidious が落ちていても表示できるように） */
+/* コメント: siatube → Invidious → Piped の順で取得 */
 async function getComments(id, signal) {
+  try {
+    const s = await siaComments(id, signal);
+    if (s && s.comments.length) return s;
+  } catch (_) {}
   try {
     const d = await api("comments", "/api/v1/comments/" + id + "?sort_by=top", { signal });
     if (d && (d.comments || []).length) return d;
+
   } catch (_) {}
   const d = await pipedGet("/comments/" + encodeURIComponent(id), signal);
   return {
@@ -2315,6 +2599,11 @@ async function loadComments(id) {
   box.appendChild(commentGhostScreen(6));
   try {
     const d = await getComments(id);
+    const head = $("#commentHead span");
+    if (head) {
+      const n = d.commentCount || (d.comments || []).length;
+      head.textContent = fmtNum(n) + " 件のコメント";
+    }
     box.innerHTML = "";
     (d.comments || []).slice(0, 50).forEach((c) => {
       const n = el("div", "comment");
@@ -2431,42 +2720,49 @@ function siaChannelShorts(d) {
   });
   return out;
 }
-/* チャンネル情報: Invidious → Piped → siatube を並列取得し、欠けた項目を補完 */
+/* チャンネル情報: ytapi / siatube を主軸に、Invidious・Piped で欠けた項目を補完 */
 async function fetchChannelData(cid, signal) {
-  const [inv, invVids, piped, sia] = await Promise.allSettled([
+  const [inv, invVids, piped, sia, yta] = await Promise.allSettled([
     api("channel", "/api/v1/channels/" + cid, { signal }),
     api("channel", "/api/v1/channels/" + cid + "/videos", { signal }),
     pipedGet("/channel/" + encodeURIComponent(cid), signal),
     siaChannel(cid, signal),
+    ytaChannel(cid, signal),
   ]);
   const I = inv.status === "fulfilled" ? inv.value : null;
   const P = piped.status === "fulfilled" ? piped.value : null;
   const X = sia.status === "fulfilled" ? sia.value : null;
-  if (!I && !P && !X) throw new Error("channel not found");
+  const Y = yta.status === "fulfilled" ? yta.value : null;
+  if (!I && !P && !X && !Y) throw new Error("channel not found");
 
   const ch = {
-    author: (I && I.author) || (P && P.name) || (X && X.title) || "",
+    author: (Y && Y.name) || (X && X.title) || (I && I.author) || (P && P.name) || "",
     authorId: cid,
     authorHandle: (I && I.authorHandle) || "",
-    subCount: (I && I.subCount) || (P && P.subscriberCount) || (X ? siaNum(X.videoCount) : 0),
-    description: (I && I.description) || (P && P.description) || (X && X.description) || "",
-    authorVerified: !!((I && I.authorVerified) || (P && P.verified)),
-    authorThumbnails: (I && I.authorThumbnails && I.authorThumbnails.length ? I.authorThumbnails
-      : (P && P.avatarUrl ? [{ url: P.avatarUrl }] : (X && X.avatar ? [{ url: X.avatar }] : []))),
-    authorBanners: (I && I.authorBanners && I.authorBanners.length ? I.authorBanners
-      : (P && P.bannerUrl ? [{ url: P.bannerUrl }] : (X && X.banner ? [{ url: X.banner }] : []))),
+    subCount: (Y && Y.subCount) || (I && I.subCount) || (P && P.subscriberCount) || (X ? siaNum(X.videoCount) : 0),
+    description: (Y && Y.description) || (X && X.description) || (I && I.description) || (P && P.description) || "",
+    authorVerified: !!((Y && Y.verified) || (I && I.authorVerified) || (P && P.verified)),
+    authorThumbnails: (Y && Y.avatar ? [{ url: Y.avatar }]
+      : (X && X.avatar ? [{ url: X.avatar }]
+        : (I && I.authorThumbnails && I.authorThumbnails.length ? I.authorThumbnails
+          : (P && P.avatarUrl ? [{ url: P.avatarUrl }] : [])))),
+    authorBanners: (Y && Y.banner ? [{ url: Y.banner }]
+      : (X && X.banner ? [{ url: X.banner }]
+        : (I && I.authorBanners && I.authorBanners.length ? I.authorBanners
+          : (P && P.bannerUrl ? [{ url: P.bannerUrl }] : [])))),
   };
 
   let videos = [];
   const seen = new Set();
   const push = (v) => { const id = vidOf(v); if (!id || seen.has(id)) return; seen.add(id); v.videoId = id; videos.push(v); };
+  if (Y && Y.videos.length) Y.videos.forEach(push);
+  if (X) siaChannelVideos(X).forEach(push);
   if (invVids.status === "fulfilled") {
     const d = invVids.value;
     (d.videos || d || []).forEach(push);
   }
   if (I && I.latestVideos) I.latestVideos.forEach(push);
   if (P && Array.isArray(P.relatedStreams)) P.relatedStreams.map(normPipedVideo).forEach(push);
-  if (X) siaChannelVideos(X).forEach(push);
 
   return { ch, videos, sia: X };
 }
@@ -2698,11 +2994,23 @@ function personalShortQueries() {
     .concat((S.subs || []).slice(0, 3).map((s) => (s.name || "") + " shorts").filter((q) => q.trim() !== "shorts"));
   return qs.length ? qs : SHORT_QUERIES;
 }
-/* 登録チャンネルのショートをまとめて取得 */
+/* 登録チャンネルのショートをまとめて取得（Piped） */
 async function fetchSubsShorts(signal, perCh) {
   const subs = (S.subs || []).slice(0, 12);
   if (!subs.length) return [];
-  const res = await Promise.allSettled(subs.map((s) => fetchChannelShorts(s.id, null, signal)));
+  const res = await Promise.allSettled(subs.map(async (s) => {
+    const lists = await Promise.allSettled([
+      pipedGet("/channels/tabs?data=" + encodeURIComponent(JSON.stringify({ id: s.id, tab: "shorts" })), signal).catch(() => null),
+      pipedGet("/channel/" + encodeURIComponent(s.id), signal),
+    ]);
+    const items = [];
+    lists.forEach((r) => {
+      if (r.status !== "fulfilled" || !r.value) return;
+      const arr = r.value.relatedStreams || r.value.content || r.value.items || [];
+      (Array.isArray(arr) ? arr : []).forEach((it) => items.push(normPipedVideo(it)));
+    });
+    return items.filter((v) => v.videoId && (v.isShort || (v.lengthSeconds > 0 && v.lengthSeconds <= 180)));
+  }));
   const out = [];
   res.forEach((r) => {
     if (r.status !== "fulfilled") return;
@@ -2715,24 +3023,32 @@ async function fetchSubsShorts(signal, perCh) {
   for (let i = out.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [out[i], out[j]] = [out[j], out[i]]; }
   return out;
 }
-/* 登録チャンネルの最新動画 */
+
+/* 登録チャンネルの動画を Piped から取得 */
+async function pipedChannelStreams(cid, signal) {
+  const d = await pipedGet("/channel/" + encodeURIComponent(cid), signal);
+  const list = (d && (d.relatedStreams || d.items)) || [];
+  return list.map(normPipedVideo).filter((v) => v.videoId);
+}
+/* 登録チャンネルの最新動画（おすすめ棚） */
 async function fetchSubsVideos(signal, perCh) {
   const subs = (S.subs || []).slice(0, 12);
   if (!subs.length) return [];
-  const res = await Promise.allSettled(subs.map((s) =>
-    api("channel", "/api/v1/channels/" + encodeURIComponent(s.id) + "/videos", { signal })));
+  const res = await Promise.allSettled(subs.map((s) => pipedChannelStreams(s.id, signal)));
   const out = [], seen = new Set();
   res.forEach((r) => {
     if (r.status !== "fulfilled") return;
-    (((r.value && (r.value.videos || r.value)) || [])).slice(0, perCh || 8).forEach((v) => {
-      const id = vidOf(v);
-      if (!id || seen.has(id)) return;
-      seen.add(id); v.videoId = id; out.push(v);
-    });
+    (r.value || []).filter((v) => !(v.lengthSeconds > 0 && v.lengthSeconds <= 180))
+      .slice(0, perCh || 8).forEach((v) => {
+        const id = vidOf(v);
+        if (!id || seen.has(id)) return;
+        seen.add(id); v.videoId = id; out.push(v);
+      });
   });
-  out.sort((a, b) => (b.published || 0) - (a.published || 0));
+  for (let i = out.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [out[i], out[j]] = [out[j], out[i]]; }
   return out;
 }
+
 /* 検索履歴に基づくおすすめ動画 */
 async function fetchHistoryRecs(signal, limit) {
   const qs = historyQueries(4);
@@ -3313,7 +3629,15 @@ document.addEventListener("webkitfullscreenchange", alignActiveShortAfterFullscr
 async function pageShorts(startId) {
   setChips(null);
   shortsSeen.clear();
-  view().innerHTML = '<div class="spinner"></div>';
+  /* 読み込み中は実際のショート画面と同じ形のゴーストスクリーンを表示 */
+  view().innerHTML =
+    '<div class="shorts-ghost" id="shortsView">' +
+    '<div class="sg-frame skel"></div>' +
+    '<div class="sg-actions">' +
+    '<div class="sg-btn skel"></div><div class="sg-btn skel"></div><div class="sg-btn skel"></div><div class="sg-btn skel"></div>' +
+    "</div>" +
+    '<div class="sg-meta"><div class="sg-line skel" style="width:60%"></div><div class="sg-line skel" style="width:40%"></div></div>' +
+    "</div>";
   const signal = nav.abort.signal;
   /* プレーヤーAPIを先読みして初回再生の待ち時間を短縮 */
   ytApiReady();
@@ -3892,6 +4216,15 @@ $("#searchForm").onsubmit = (e) => {
   addSearchHistory(q); hideSug();
   go("/results?q=" + encodeURIComponent(q));
 };
+/* 検索クリア（×）ボタン: 入力があるときだけ表示し、押すと消去 */
+(() => {
+  const qInput = $("#q"), qClear = $("#btnClearQ");
+  if (!qInput || !qClear) return;
+  const syncClear = () => { qClear.hidden = !qInput.value; };
+  qInput.addEventListener("input", syncClear);
+  qClear.addEventListener("click", () => { qInput.value = ""; syncClear(); qInput.focus(); });
+  syncClear();
+})();
 
 /* 音声検索: 対応ブラウザでは日本語音声を認識し、確定した内容で検索する */
 (() => {
