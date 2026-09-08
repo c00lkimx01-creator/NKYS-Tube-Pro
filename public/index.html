@@ -1594,6 +1594,91 @@ async function ytaVideo(id, signal) {
   return v;
 }
 
+/* ---------------- 自前 Worker API (ショート / チャンネル) ----------------
+   /api/v1/shorts/{videoid} : 現在のショート + 次に流すシーケンス(関連ショート)
+   /api/v1/channels/{channelID} : チャンネル情報と動画一覧
+   いずれも失敗しても既存の取得経路にフォールバックする(表示は壊さない)     */
+async function wkGet(path, signal, ms) {
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), ms || 9000);
+  const onAbort = () => ac.abort();
+  if (signal) { if (signal.aborted) ac.abort(); else signal.addEventListener("abort", onAbort); }
+  try {
+    const r = await fetch(WORKER_API + path, { signal: ac.signal, headers: { accept: "application/json" } });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const d = await r.json();
+    if (d && d.error) throw new Error(String(d.error));
+    return d;
+  } finally {
+    clearTimeout(t);
+    if (signal) { try { signal.removeEventListener("abort", onAbort); } catch (_) {} }
+  }
+}
+function wkShortNorm(x) {
+  if (!x) return null;
+  const id = x.id || x.videoId;
+  if (!id || !/^[\w-]{11}$/.test(id)) return null;
+  const th = ((x.videoThumbnails || []).map((t) => t && t.url).filter(Boolean)[0]) || x.thumbnail || "";
+  return {
+    videoId: id,
+    title: x.title || "",
+    author: x.author || "",
+    authorId: x.authorId || "",
+    authorThumbnails: x.authorThumbnails || [],
+    lengthSeconds: x.lengthSeconds || 0,
+    viewCount: x.viewCount || 0,
+    isShort: true,
+    __thumb: th,
+    __src: "worker",
+  };
+}
+/* ショート本体 + 関連(次に表示する)ショート */
+async function wkShorts(id, signal) {
+  const d = await wkGet("/api/v1/shorts" + (id ? "/" + encodeURIComponent(id) : ""), signal);
+  return {
+    current: wkShortNorm(d && d.current),
+    sequence: (((d && d.sequence) || [])).map(wkShortNorm).filter(Boolean),
+  };
+}
+/* 関連ショートを配列で返す(重複除去つき) */
+async function wkRelatedShorts(id, signal, withCurrent) {
+  let r = null;
+  try { r = await wkShorts(id || "", signal); } catch (_) { return []; }
+  const src = (withCurrent && r.current ? [r.current] : []).concat(r.sequence || []);
+  const out = [];
+  src.forEach((v) => {
+    if (!v || shortsSeen.has(v.videoId)) return;
+    shortsSeen.add(v.videoId);
+    out.push(v);
+  });
+  return out;
+}
+/* チャンネル情報 (Worker) */
+async function wkChannel(cid, signal) { return wkGet("/api/v1/channels/" + encodeURIComponent(cid), signal); }
+function wkChannelVideos(d) {
+  const arr = (d && (d.latestVideos || d.videos || d.items || d.relatedStreams || d.content)) || [];
+  return (Array.isArray(arr) ? arr : []).map((it) => {
+    const id = it && (it.videoId || it.id);
+    if (!id || !/^[\w-]{11}$/.test(id)) return null;
+    return {
+      videoId: id,
+      title: it.title || "",
+      author: it.author || (d && d.author) || "",
+      authorId: it.authorId || (d && d.authorId) || "",
+      authorThumbnails: it.authorThumbnails || (d && d.authorThumbnails) || [],
+      lengthSeconds: it.lengthSeconds || it.duration || 0,
+      viewCount: it.viewCount || it.views || 0,
+      published: it.published || 0,
+      publishedText: it.publishedText || it.uploadedDate || "",
+      isShort: !!it.isShort,
+    };
+  }).filter(Boolean);
+}
+/* 登録チャンネルの動画を Worker から取得 */
+async function wkChannelStreams(cid, signal) {
+  try { return wkChannelVideos(await wkChannel(cid, signal)); } catch (_) { return []; }
+}
+
 /* 動画IDを確実に取得する（Piped/Invidious/shorts URL いずれにも対応） */
 function vidOf(v) {
   if (!v) return "";
@@ -1906,8 +1991,8 @@ async function pageHome() {
   root.appendChild(normalSec);
 
   const signal = nav.abort.signal;
-  /* Short棚: 登録チャンネルのショート → 検索履歴ベース */
-  const shortsPromise = fetchSubsShorts(signal, 6).catch(() => []);
+  /* Short棚: Worker API のショート(登録不要) + 登録チャンネルのショート */
+  const shortsPromise = homeShortsFeed(signal).catch(() => []);
   const trendPromise = homeFeed(homeChip, signal);
 
   shortsPromise.then((items) => {
@@ -1917,9 +2002,7 @@ async function pageHome() {
     (items || []).slice(0, 12).forEach((v) => shortShelf.appendChild(shortCard(v)));
 
     if (!shortShelf.children.length) {
-      shortShelf.appendChild(el("div", "empty", (S.subs || []).length
-        ? "登録チャンネルのショートが見つかりませんでした"
-        : "チャンネルを登録すると、ここにショートが表示されます"));
+      shortShelf.appendChild(el("div", "empty", "ショートを取得できませんでした"));
     }
   }).catch(() => shortSec.remove());
 
@@ -1936,16 +2019,21 @@ async function pageHome() {
     return recFilled;
   };
   /* おすすめ棚: 登録チャンネルの動画のみ */
-  fetchSubsVideos(signal, 6).catch(() => []).then((subsV) => {
+  fetchSubsVideos(signal, 6).catch(() => []).then(async (subsV) => {
     if (signal.aborted) return;
-    if (!paintRec(subsV)) {
+    if (paintRec(subsV)) return;
+    /* 登録チャンネルが無い / 取れない場合でも、おすすめは必ず表示する */
+    let fb = [];
+    try { fb = await fetchHistoryRecs(signal, 20); } catch (_) {}
+    if (signal.aborted) return;
+    if (!fb.length) { try { fb = await homeFeed(homeChip, signal); } catch (_) {} }
+    if (signal.aborted) return;
+    if (!paintRec(fb)) {
       recShelf.innerHTML = "";
       recShelf.removeAttribute("aria-busy");
       recFilled = true;
       recExhausted = true;
-      recShelf.appendChild(el("div", "empty", (S.subs || []).length
-        ? "登録チャンネルの動画を取得できませんでした"
-        : "チャンネルを登録すると、ここにおすすめが表示されます"));
+      recShelf.appendChild(el("div", "empty", "おすすめを取得できませんでした"));
     }
   });
   const paintFeed = (data) => {
@@ -3032,6 +3120,29 @@ async function fetchSubsShorts(signal, perCh) {
   return out;
 }
 
+/* ホームのショート棚: 登録していなくても表示できるようにする。
+   Worker API(/api/v1/shorts) を主に使い、登録があればそのショートを先頭に混ぜる */
+async function homeShortsFeed(signal) {
+  const out = [], seen = new Set();
+  const push = (v) => {
+    const id = vidOf(v);
+    if (!id || seen.has(id)) return;
+    v.videoId = id; v.isShort = true; seen.add(id); out.push(v);
+  };
+  const res = await Promise.allSettled([
+    wkRelatedShorts("", signal, true),
+    (S.subs || []).length ? fetchSubsShorts(signal, 4) : Promise.resolve([]),
+  ]);
+  const wk = res[0].status === "fulfilled" ? res[0].value || [] : [];
+  const subs = res[1].status === "fulfilled" ? res[1].value || [] : [];
+  subs.forEach(push);
+  wk.forEach(push);
+  if (!out.length) {
+    try { (await fetchShortsQuick(personalShortQueries().slice(0, 3), signal) || []).forEach(push); } catch (_) {}
+  }
+  return out;
+}
+
 /* 登録チャンネルの動画を Piped から取得 */
 async function pipedChannelStreams(cid, signal) {
   const d = await pipedGet("/channel/" + encodeURIComponent(cid), signal);
@@ -3042,7 +3153,16 @@ async function pipedChannelStreams(cid, signal) {
 async function fetchSubsVideos(signal, perCh) {
   const subs = (S.subs || []).slice(0, 12);
   if (!subs.length) return [];
-  const res = await Promise.allSettled(subs.map((s) => pipedChannelStreams(s.id, signal)));
+  const res = await Promise.allSettled(subs.map(async (s) => {
+    /* Piped と Worker(/api/v1/channels/{id}) の両方から取得し、取れた方を使う */
+    const both = await Promise.allSettled([
+      pipedChannelStreams(s.id, signal),
+      wkChannelStreams(s.id, signal),
+    ]);
+    const merged = [];
+    both.forEach((r) => { if (r.status === "fulfilled") (r.value || []).forEach((v) => merged.push(v)); });
+    return merged;
+  }));
   const out = [], seen = new Set();
   res.forEach((r) => {
     if (r.status !== "fulfilled") return;
@@ -3650,10 +3770,23 @@ async function pageShorts(startId) {
   /* プレーヤーAPIを先読みして初回再生の待ち時間を短縮 */
   ytApiReady();
   let list;
-  /* 登録チャンネルのショートを最優先で表示 */
-  try { list = await fetchSubsShorts(signal, 6); }
+  /* Worker API のショート(開いたIDの関連シーケンス)を最優先で表示 */
+  try { list = await wkRelatedShorts(startId || "", signal, true); }
   catch (e) { if (isAbort(e)) return; list = []; }
   if (signal.aborted) return;
+  /* 登録チャンネルがあれば、そのショートも混ぜる */
+  if ((S.subs || []).length) {
+    try {
+      const mine = await fetchSubsShorts(signal, 4);
+      if (!signal.aborted && mine && mine.length) list = mine.concat(list || []);
+    } catch (e) { if (isAbort(e)) return; }
+  }
+  if (signal.aborted) return;
+  if (!list || !list.length) {
+    try { list = await fetchSubsShorts(signal, 6); }
+    catch (e) { if (isAbort(e)) return; list = []; }
+    if (signal.aborted) return;
+  }
   /* 登録チャンネルが無い / 取得できない場合は検索履歴を元に補完 */
   if (!list.length) {
     try { list = await fetchShortsQuick(personalShortQueries().slice(0, 3), signal); }
@@ -3689,6 +3822,13 @@ async function pageShorts(startId) {
   append(list);
   box.appendChild(end);
 
+  /* 表示中の最後のショートから、Worker API の関連ショートをつなげる */
+  const lastShortId = () => {
+    const nodes = box.querySelectorAll(".short");
+    const lastNode = nodes[nodes.length - 1];
+    return (lastNode && lastNode.dataset && lastNode.dataset.id) || vidOf(list[list.length - 1] || {}) || "";
+  };
+
   /* 残りの検索結果はバックグラウンドで追加 (初回描画をブロックしない) */
   fetchShorts(personalShortQueries(), signal).then((rest) => {
     if (signal.aborted || !rest.length || !box.isConnected) return;
@@ -3701,9 +3841,13 @@ async function pageShorts(startId) {
     if (!es.some((e) => e.isIntersecting) || busy) return;
     busy = true; round++;
     try {
-      const qs = personalShortQueries().slice().sort(() => Math.random() - .5).slice(0, 4)
-        .map((q) => q + (round > 1 ? " " + round : ""));
-      const nxt = await fetchShorts(qs, signal);
+      /* まず Worker API の関連ショートで続きを埋める */
+      let nxt = await wkRelatedShorts(lastShortId(), signal, false);
+      if (!nxt.length) {
+        const qs = personalShortQueries().slice().sort(() => Math.random() - .5).slice(0, 4)
+          .map((q) => q + (round > 1 ? " " + round : ""));
+        nxt = await fetchShorts(qs, signal);
+      }
       if (!nxt.length) { end.textContent = "これ以上のショートはありません"; more.disconnect(); }
       else { box.removeChild(end); append(nxt); box.appendChild(end); }
     } catch (_) { end.textContent = "読み込みに失敗しました"; }
