@@ -1076,6 +1076,60 @@ dialog,
   .short .sh-prog{left:0;right:0;bottom:0;padding:0}
 }
 </style>
+
+<style id="nkys-2026-additions">
+/* ショートカードの ⋯ メニュー */
+.short-card{position:relative}
+.short-card .sc-more{position:absolute;top:6px;right:6px;width:32px;height:32px;border:0;padding:0;
+  border-radius:50%;background:rgba(0,0,0,.6);color:#fff;display:grid;place-items:center;cursor:pointer;
+  opacity:0;transition:opacity .15s var(--ease),background .15s var(--ease);z-index:3}
+.short-card .sc-more svg{width:18px;height:18px;fill:currentColor}
+.short-card:hover .sc-more,.short-card .sc-more:focus-visible{opacity:1}
+.short-card .sc-more:hover{background:rgba(0,0,0,.85)}
+@media(hover:none){.short-card .sc-more{opacity:1}}
+
+/* 横スクロール棚の矢印ボタン */
+.shelf-nav{position:relative}
+.shelf-arrow{position:absolute;top:38%;transform:translateY(-50%);width:40px;height:40px;border:0;padding:0;
+  border-radius:50%;background:rgba(20,20,20,.86);color:#fff;display:grid;place-items:center;cursor:pointer;
+  z-index:5;box-shadow:0 2px 10px rgba(0,0,0,.5);transition:opacity .15s var(--ease),transform .15s var(--ease)}
+.shelf-arrow svg{width:24px;height:24px;fill:currentColor}
+.shelf-arrow:hover{transform:translateY(-50%) scale(1.08)}
+.shelf-arrow.prev{left:-4px}
+.shelf-arrow.next{right:-4px}
+.shelf-arrow.hide{opacity:0;pointer-events:none}
+@media(max-width:640px){.shelf-arrow{width:34px;height:34px}.shelf-arrow.prev{left:0}.shelf-arrow.next{right:0}}
+
+/* チャンネル: 注目のコンテンツ */
+.chFeatured{margin:4px 0 18px}
+.chFeatured .fLabel{font-size:11px;letter-spacing:.14em;color:var(--fg-dim);margin-bottom:8px}
+.chFeatured .fBox{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:0;
+  background:var(--bg-elev);border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer}
+.chFeatured .fThumb{position:relative;aspect-ratio:16/9;background:#000}
+.chFeatured .fThumb img{width:100%;height:100%;object-fit:cover;display:block}
+.chFeatured .fPlay{position:absolute;inset:0;display:grid;place-items:center}
+.chFeatured .fPlay span{width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.92);
+  display:grid;place-items:center}
+.chFeatured .fPlay svg{width:26px;height:26px;fill:#111;margin-left:3px}
+.chFeatured .fDur{position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,.8);color:#fff;
+  font-size:12px;padding:2px 6px;border-radius:4px}
+.chFeatured .fBody{padding:18px 20px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.chFeatured .fTag{color:var(--brand);font-size:12px;font-weight:700}
+.chFeatured .fTitle{font-size:20px;font-weight:800;line-height:1.35;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.chFeatured .fMeta{font-size:12px;color:var(--fg-dim)}
+.chFeatured .fWatch{margin-top:auto;align-self:flex-end;font-size:13px;color:var(--fg);opacity:.9}
+@media(max-width:720px){.chFeatured .fBox{grid-template-columns:1fr}
+  .chFeatured .fBody{padding:14px}.chFeatured .fTitle{font-size:16px}}
+
+/* 検索サジェスト: 長くなったらスクロール */
+#sugBox{max-height:min(60vh,420px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
+#sugBox::-webkit-scrollbar{width:8px}
+#sugBox::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px}
+.sug.sug-remote .sug-t{font-weight:500}
+.sug-arrow{flex:none;opacity:.55}
+.sug-arrow svg{width:16px;height:16px}
+</style>
 </head>
 <body>
 
@@ -2371,6 +2425,7 @@ async function pageHome() {
   shortSec.appendChild(shortShelf);
 
   root.appendChild(shortSec);
+  attachShelfArrows(shortShelf);
 
     const recSec = el("section", "home-section home-ghost");
   recSec.innerHTML = '<div class="home-section-head"><h2>おすすめ</h2></div>';
@@ -2380,6 +2435,7 @@ async function pageHome() {
   recSec.appendChild(recShelf);
 
   root.appendChild(recSec);
+  attachShelfArrows(recShelf);
 
   /* おすすめ棚: 右端まで横スクロールしたら追加読み込み */
   const recSeen = new Set();
@@ -2529,13 +2585,52 @@ function shortCard(v) {
   c.innerHTML =
     '<div class="sc-thumb"><img loading="lazy" decoding="async" width="320" height="568" src="' + esc(shortThumbUrl(v)) +
       '" onerror="this.src=\'' + esc(thumbUrl(v, "m")) + '\'" alt=""></div>' +
+    '<button class="sc-more" type="button" aria-label="その他" title="その他"><svg viewBox="0 0 24 24"><path d="M12 8a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4z"/></svg></button>' +
     '<div class="sc-info">' +
       '<div class="sc-title">' + esc(t0) + "</div>" +
       '<div class="sc-views">' + (v.viewCount ? fmtNum(v.viewCount) + "回視聴" : esc(v.publishedText || "")) + "</div>" +
     "</div>";
   fixTitleLater(c.querySelector(".sc-title"), v);
+  const scMore = c.querySelector(".sc-more");
+  if (scMore) scMore.onclick = (e) => { e.stopPropagation(); openCardMenu(scMore, v); };
   c.onclick = () => go("/short/" + id);
   return c;
+}
+
+/* 横スクロール棚に「前へ / 次へ」ボタンを付ける */
+function attachShelfArrows(scr) {
+  if (!scr || scr._shelfArrows) return scr;
+  scr._shelfArrows = true;
+  const wrap = el("div", "shelf-nav");
+  const parent = scr.parentNode;
+  if (parent) parent.insertBefore(wrap, scr);
+  wrap.appendChild(scr);
+  const mk = (dir, cls, label) => {
+    const b = el("button", "shelf-arrow " + cls + " hide");
+    b.type = "button";
+    b.setAttribute("aria-label", label);
+    b.innerHTML = '<svg viewBox="0 0 24 24"><path d="' +
+      (dir < 0 ? "M15.4 7.4 14 6l-6 6 6 6 1.4-1.4L10.8 12z" : "M8.6 16.6 10 18l6-6-6-6-1.4 1.4L13.2 12z") + '"/></svg>';
+    b.onclick = (e) => {
+      e.stopPropagation();
+      scr.scrollBy({ left: dir * Math.max(240, scr.clientWidth * 0.85), behavior: "smooth" });
+    };
+    wrap.appendChild(b);
+    return b;
+  };
+  const prev = mk(-1, "prev", "前へ"), next = mk(1, "next", "次へ");
+  const sync = () => {
+    const max = scr.scrollWidth - scr.clientWidth - 4;
+    prev.classList.toggle("hide", scr.scrollLeft <= 4);
+    next.classList.toggle("hide", max <= 0 || scr.scrollLeft >= max);
+  };
+  scr.addEventListener("scroll", sync, { passive: true });
+  try { new ResizeObserver(sync).observe(scr); } catch (_) {}
+  try { new MutationObserver(sync).observe(scr, { childList: true }); } catch (_) {}
+  window.addEventListener("resize", sync);
+  setTimeout(sync, 300);
+  sync();
+  return scr;
 }
 function shortsShelf(list, query) {
   const box = el("div", "shelf");
@@ -2551,6 +2646,7 @@ function shortsShelf(list, query) {
   });
   add(list || []);
   box.appendChild(head); box.appendChild(scr);
+  attachShelfArrows(scr);
 
   /* 横スクロールすると更にショートを読み込む */
   if (query) {
@@ -3362,6 +3458,35 @@ function channelGhostScreen() {
     '</div>';
   return w;
 }
+/* チャンネルの「注目のコンテンツ」: 最新動画を大きく表示 */
+function channelFeatured(videos, ch) {
+  const list = (videos || []).filter((v) => vidOf(v));
+  if (!list.length) return null;
+  const sorted = list.slice().sort((a, b) => (b.published || 0) - (a.published || 0));
+  const v = sorted[0];
+  const id = vidOf(v);
+  const box = el("div", "chFeatured");
+  const dur = v.lengthSeconds ? '<span class="fDur">' + fmtDur(v.lengthSeconds) + "</span>" : "";
+  const meta = [esc(ch && ch.author ? ch.author : v.author || ""),
+    v.viewCount ? fmtNum(v.viewCount) + "回視聴" : "",
+    esc(v.publishedText || ago(v.published) || "")].filter(Boolean).join("・");
+  box.innerHTML =
+    '<div class="fLabel">FEATURED</div>' +
+    '<div class="fBox">' +
+      '<div class="fThumb"><img loading="eager" decoding="async" src="' + esc(thumbUrl(v, "h")) + '" alt="">' +
+        '<div class="fPlay"><span><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span></div>' + dur + "</div>" +
+      '<div class="fBody">' +
+        '<div class="fTag">注目のコンテンツ</div>' +
+        '<div class="fTitle">' + esc(v.title || "") + "</div>" +
+        '<div class="fMeta">' + meta + "</div>" +
+        '<div class="fWatch">今すぐ見る　→</div>' +
+      "</div>" +
+    "</div>";
+  fixTitleLater(box.querySelector(".fTitle"), v);
+  box.onclick = () => go("/watch?v=" + id);
+  return box;
+}
+
 async function pageChannel(cid) {
   setChips(null);
   view().innerHTML = "";
@@ -3553,6 +3678,8 @@ async function pageChannel(cid) {
       return;
     }
     if (tab === "videos") {
+      const feat = channelFeatured(allVideos, ch);
+      if (feat) body.appendChild(feat);
       body.appendChild(sortBar(() => showTab("videos")));
       body.appendChild(renderGrid(sortVideos(allVideos)));
     } else if (tab === "shorts") {
@@ -4640,13 +4767,29 @@ async function pageSubs() {
   feed.appendChild(el("div", "spinner"));
   view().appendChild(feed);
 
-  const res = await Promise.allSettled(S.subs.map((s) => api("channel", "/api/v1/channels/" + s.id + "/videos")));
-  if (nav.abort && nav.abort.signal.aborted) return;
+  const signal = nav.abort && nav.abort.signal;
+  const seen = new Set();
   const all = [];
-  res.forEach((r) => { if (r.status === "fulfilled") all.push(...((r.value.videos || r.value || []).slice(0, 12))); });
+  const push = (v) => {
+    const id = vidOf(v);
+    if (!id || seen.has(id)) return;
+    seen.add(id); v.videoId = id; all.push(v);
+  };
+  /* Invidious 系 + Piped + Worker を並列で叩き、取れたものを統合する */
+  const res = await Promise.allSettled(
+    S.subs.map((s) => api("channel", "/api/v1/channels/" + s.id + "/videos"))
+      .concat([fetchSubsVideos(signal, 12)])
+  );
+  if (signal && signal.aborted) return;
+  res.forEach((r) => {
+    if (r.status !== "fulfilled") return;
+    const arr = (r.value && (r.value.videos || r.value)) || [];
+    (Array.isArray(arr) ? arr : []).slice(0, 12).forEach(push);
+  });
   all.sort((a, b) => (b.published || 0) - (a.published || 0));
   feed.innerHTML = "";
   feed.appendChild(el("div", "sechead", "最新の動画"));
+  if (!all.length) { feed.appendChild(el("div", "empty", "最新の動画を取得できませんでした")); return; }
   feed.appendChild(renderGrid(all));
 }
 
@@ -4920,25 +5063,65 @@ function removeSearchHistory(q) {
   LS.set("searches", S.searches);
 }
 let sugIndex = -1;
+const SUG_SEARCH_ICON = '<svg viewBox="0 0 24 24"><path d="M20.87 20.17l-5.59-5.59A6.94 6.94 0 0016.5 10a7 7 0 10-7 7 6.94 6.94 0 004.58-1.72l5.59 5.59zM3.5 10a6 6 0 116 6 6 6 0 01-6-6z"/></svg>';
 function hideSug() { $("#sugBox").classList.remove("on"); sugIndex = -1; }
-function showSug() {
-  const box = $("#sugBox"), term = $("#q").value.trim().toLowerCase();
-  const list = S.searches.filter((x) => !term || x.toLowerCase().includes(term)).slice(0, 10);
+
+/* YouTube 相当の検索候補を取得（Piped → Invidious の順にフォールバック） */
+let sugSeq = 0, sugTimer = null, sugRemote = [], sugRemoteTerm = null;
+async function fetchSuggest(term) {
+  try {
+    const d = await pipedGet("/suggestions?query=" + encodeURIComponent(term));
+    if (Array.isArray(d) && d.length) return d.map(String);
+  } catch (_) {}
+  try {
+    const d = await api("search", "/api/v1/search/suggestions?q=" + encodeURIComponent(term));
+    const arr = (d && (d.suggestions || d)) || [];
+    if (Array.isArray(arr) && arr.length) return arr.map((x) => String(x && x.suggestion ? x.suggestion : x));
+  } catch (_) {}
+  return [];
+}
+function queueSuggest() {
+  const term = $("#q").value.trim().toLowerCase();
+  clearTimeout(sugTimer);
+  if (!term || term === sugRemoteTerm) return;
+  sugTimer = setTimeout(async () => {
+    const seq = ++sugSeq;
+    const list = await fetchSuggest(term);
+    if (seq !== sugSeq) return;
+    sugRemoteTerm = term; sugRemote = list;
+    if (document.activeElement === $("#q")) renderSug();
+  }, 180);
+}
+function renderSug() {
+  const box = $("#sugBox"), raw = $("#q").value.trim(), term = raw.toLowerCase();
+  const hist = (S.searches || []).filter((x) => !term || String(x).toLowerCase().includes(term)).slice(0, 8);
+  const histLower = hist.map((x) => String(x).toLowerCase());
+  const remote = (sugRemoteTerm === term ? sugRemote : [])
+    .filter((x) => x && histLower.indexOf(String(x).toLowerCase()) < 0).slice(0, 12);
   box.innerHTML = "";
-  if (!list.length) return hideSug();
-  list.forEach((q, i) => {
-    const row = el("div", "sug" + (i === sugIndex ? " sel" : ""));
-    row.innerHTML = SUG_ICON + '<span class="sug-t">' + esc(q) + '</span><span class="sug-x">削除</span>';
+  if (!hist.length && !remote.length) return hideSug();
+  const addRow = (q, isHist) => {
+    const row = el("div", "sug" + (isHist ? "" : " sug-remote"));
+    row.innerHTML = (isHist ? SUG_ICON : SUG_SEARCH_ICON) +
+      '<span class="sug-t">' + esc(q) + "</span>" +
+      (isHist ? '<span class="sug-x">削除</span>' : "");
     row.onmousedown = (e) => {
       e.preventDefault();
-      if (e.target.closest(".sug-x")) { removeSearchHistory(q); showSug(); return; }
+      if (isHist && e.target.closest(".sug-x")) { removeSearchHistory(q); renderSug(); return; }
       $("#q").value = q; addSearchHistory(q); hideSug();
       go("/results?q=" + encodeURIComponent(q));
     };
     box.appendChild(row);
-  });
+  };
+  hist.forEach((q) => addRow(q, true));
+  remote.forEach((q) => addRow(q, false));
+  const rows = box.querySelectorAll(".sug");
+  if (sugIndex >= rows.length) sugIndex = -1;
+  rows.forEach((r, i) => r.classList.toggle("sel", i === sugIndex));
   box.classList.add("on");
+  box.scrollTop = 0;
 }
+function showSug() { renderSug(); queueSuggest(); }
 $("#q").addEventListener("focus", showSug);
 $("#q").addEventListener("input", () => { sugIndex = -1; showSug(); });
 $("#q").addEventListener("blur", () => setTimeout(hideSug, 120));
