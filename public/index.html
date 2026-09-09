@@ -1015,6 +1015,66 @@ dialog,
 @media(max-width:840px) and (orientation:landscape){
   #shortsView .short{height:calc(100dvh - var(--hdr))}
 }
+
+/* ============ 追加: コラボ表示 / チャンネル内検索 / モバイル Shorts ============ */
+.collab-plus{display:inline-block;margin-left:6px;padding:0 6px;border-radius:999px;background:rgba(255,255,255,.16);
+  color:inherit;font-size:11px;font-weight:700;line-height:18px;vertical-align:middle;cursor:pointer}
+.collab-plus:hover{background:rgba(255,255,255,.28)}
+.collab-sheet{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.6);display:grid;place-items:center;padding:16px}
+.collab-sheet .cs-box{width:min(420px,94vw);background:var(--bg-elev);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.collab-sheet .cs-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;font-weight:700;border-bottom:1px solid var(--line)}
+.collab-sheet .cs-head button{background:transparent;border:0;color:var(--fg);font-size:16px;cursor:pointer}
+.collab-sheet .cs-body{max-height:60vh;overflow:auto}
+.collab-sheet .cs-item{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;font-size:14px}
+.collab-sheet .cs-item:hover{background:var(--bg-hover)}
+.collab-sheet .cs-item img,.collab-sheet .cs-ph{width:32px;height:32px;border-radius:50%;object-fit:cover;background:var(--bg-hover);flex:none}
+
+/* チャンネル: コラボ行 */
+.chCollab{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
+.chCollab .cc-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;
+  background:var(--chip);font-size:13px;cursor:pointer}
+.chCollab .cc-chip img{width:20px;height:20px;border-radius:50%;object-fit:cover}
+.chCollab .cc-chip b{font-weight:600}
+.chCollab .cc-x{opacity:.6;font-size:12px}
+.chCollab .cc-add{padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:transparent;
+  color:var(--fg);font-size:13px;cursor:pointer}
+
+/* チャンネル内検索 */
+.chSearchRow{display:flex;justify-content:flex-end;padding:10px 2px 0}
+.chSearchBox{display:flex;align-items:center;gap:8px;width:min(360px,100%);height:38px;padding:0 12px;
+  border:1px solid var(--line);border-radius:999px;background:var(--bg-elev)}
+.chSearchBox svg{width:18px;height:18px;fill:var(--fg-dim);flex:none}
+.chSearchBox input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:var(--fg);font-size:14px}
+.chSearchBox button{background:transparent;border:0;color:var(--fg-dim);cursor:pointer;font-size:14px}
+.chSearchInfo{padding:10px 2px;color:var(--fg-dim);font-size:13px}
+
+/* モバイルの Shorts を YouTube そっくりに */
+@media(max-width:860px){
+  #shortsView{background:#000}
+  .short .sh-stage{height:100%;width:100%;max-width:none;aspect-ratio:auto;border-radius:0;box-shadow:none}
+  .short .sh-modesw{display:none}
+  .short .sh-full{display:none}
+  .short .sh-mute{top:10px;right:8px;width:38px;height:38px;background:transparent}
+  .short .sh-overlay{position:absolute;left:0;right:64px;bottom:0;padding:60px 12px 18px;z-index:3;
+    display:flex;flex-direction:column;justify-content:flex-end;
+    background:linear-gradient(to top,rgba(0,0,0,.72) 0%,rgba(0,0,0,.32) 48%,rgba(0,0,0,0) 100%)}
+  .short .sh-owner{display:flex;align-items:center;gap:8px;order:2;margin-top:10px}
+  .short .sh-owner img{width:30px;height:30px;border-radius:50%;object-fit:cover}
+  .short .sh-owner .sh-name{font-size:14px;font-weight:600;color:#fff}
+  .short .sh-sub{height:28px;padding:0 12px;font-size:12.5px}
+  .short .sh-title{order:1;margin:0;font-size:14px;line-height:1.4;color:#fff;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .short .sh-desc{display:none}
+  .short .sh-views{order:3;margin-top:6px;font-size:12px;color:rgba(255,255,255,.86)}
+  .short .sh-side{position:absolute;right:4px;bottom:14px;display:flex;flex-direction:column;align-items:center;gap:14px;z-index:4}
+  .short .sh-act{width:44px;height:44px;background:transparent;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+  .short .sh-act:hover{background:transparent}
+  .short .sh-act svg{width:27px;height:27px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}
+  .short .sh-act.on{background:transparent;color:#fff}
+  .short .sh-cnt{font-size:11.5px}
+  .short .sh-time{display:none}
+  .short .sh-prog{left:0;right:0;bottom:0;padding:0}
+}
 </style>
 </head>
 <body>
@@ -1221,6 +1281,7 @@ const S = {
   later: LS.get("later", []),
   playlists: LS.get("playlists", {}),
   health: LS.get("health", {}),
+  collabs: LS.get("collabs", {}),
 };
 const saveSettings = () => LS.set("settings", S.settings);
 const RG = () => (S.settings.region || "JP");
@@ -1250,6 +1311,128 @@ function ago(ts) {
   return "たった今";
 }
 const isAbort = (e) => e && (e.name === "AbortError" || /abort/i.test(e.message || ""));
+
+/* ============ 追加ユーティリティ (時間指定 / タイトル補完 / コラボ) ============ */
+/* &t= の秒・分・時指定を解釈: 90 / 90s / 1m30s / 1h2m3s / 1:30 / 1:02:03 */
+function parseTimeParam(raw) {
+  if (raw == null) return 0;
+  const s = String(raw).trim().toLowerCase();
+  if (!s) return 0;
+  if (/^\d+$/.test(s)) return parseInt(s, 10);
+  if (s.includes(":")) {
+    const p = s.split(":").map((x) => parseInt(x, 10) || 0);
+    while (p.length < 3) p.unshift(0);
+    return p[0] * 3600 + p[1] * 60 + p[2];
+  }
+  const m = s.match(/^(?:(\d+(?:\.\d+)?)h)?(?:(\d+(?:\.\d+)?)m)?(?:(\d+(?:\.\d+)?)s)?$/);
+  if (m && (m[1] || m[2] || m[3])) return Math.round((+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0));
+  const n = parseFloat(s);
+  return isFinite(n) && n > 0 ? Math.round(n) : 0;
+}
+/* 秒 -> 1h2m3s 形式 (共有リンク用) */
+function fmtTimeParam(sec) {
+  sec = Math.max(0, Math.round(sec || 0));
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), x = sec % 60;
+  return (h ? h + "h" : "") + (m ? m + "m" : "") + x + "s";
+}
+
+/* --- ショートのタイトルが "Shorts" などになってしまう場合の補完 --- */
+const TITLE_CACHE = new Map();
+function badTitle(t) {
+  const x = String(t == null ? "" : t).trim();
+  return !x || /^#?\s*(shorts?|ショート|short動画|youtube\s*shorts)\s*$/i.test(x);
+}
+function resolveVideoTitle(id) {
+  if (!id) return Promise.resolve("");
+  if (TITLE_CACHE.has(id)) return TITLE_CACHE.get(id);
+  const job = (async () => {
+    const tries = [
+      async () => (typeof siaWatch === "function" ? (await siaWatch(id)).title : ""),
+      async () => (typeof nivVideo === "function" ? (await nivVideo(id)).title : ""),
+      async () => {
+        const r = await fetch("https://www.youtube.com/oembed?format=json&url=" +
+          encodeURIComponent("https://www.youtube.com/watch?v=" + id));
+        if (!r.ok) throw new Error("oembed");
+        return (await r.json()).title || "";
+      },
+    ];
+    for (const f of tries) {
+      try { const t = await f(); if (!badTitle(t)) return t; } catch (_) {}
+    }
+    return "";
+  })();
+  TITLE_CACHE.set(id, job);
+  return job;
+}
+/* タイトル要素を後追いで正しい値に差し替える (取得できなければ現状維持) */
+function fixTitleLater(node, v) {
+  if (!node) return;
+  const id = vidOf(v);
+  if (!id || !badTitle(v && v.title)) return;
+  resolveVideoTitle(id).then((t) => {
+    if (!t || !node.isConnected) return;
+    if (v) v.title = t;
+    node.textContent = t;
+    node.title = t;
+  }).catch(() => {});
+}
+
+/* --- コラボチャンネル (ローカル登録) --- */
+function collabList(cid) {
+  if (!cid) return [];
+  return (S.collabs[cid] || []).filter((x) => x && x.id);
+}
+function collabSave() { LS.set("collabs", S.collabs); }
+function collabAdd(a, b) {
+  if (!a || !b || !b.id || a === b.id) return false;
+  const cur = collabList(a);
+  if (cur.some((x) => x.id === b.id)) return false;
+  S.collabs[a] = cur.concat([{ id: b.id, name: b.name || b.id, img: b.img || "" }]);
+  /* 相互に登録して、どちらのチャンネルからでもコラボ相手を見られるようにする */
+  const back = collabList(b.id);
+  if (!back.some((x) => x.id === a)) {
+    S.collabs[b.id] = back.concat([{ id: a, name: (b.baseName || a), img: b.baseImg || "" }]);
+  }
+  collabSave();
+  return true;
+}
+function collabRemove(a, bid) {
+  S.collabs[a] = collabList(a).filter((x) => x.id !== bid);
+  S.collabs[bid] = collabList(bid).filter((x) => x.id !== a);
+  collabSave();
+}
+/* YouTube と同じ "Aさん + 1" 表示 */
+function collabPlusHtml(cid) {
+  const n = collabList(cid).length;
+  return n ? '<span class="collab-plus" data-collab="' + esc(cid) + '">+' + n + "</span>" : "";
+}
+function collabNameHtml(cid, name) { return esc(name || "") + collabPlusHtml(cid); }
+function openCollabSheet(cid) {
+  const list = collabList(cid);
+  if (!list.length) return;
+  const old = document.querySelector(".collab-sheet");
+  if (old) old.remove();
+  const wrap = el("div", "collab-sheet");
+  wrap.innerHTML = '<div class="cs-box"><div class="cs-head">コラボしているチャンネル<button aria-label="閉じる">✕</button></div><div class="cs-body"></div></div>';
+  const body = wrap.querySelector(".cs-body");
+  [{ id: cid, name: "このチャンネル", img: "" }].concat(list).forEach((c, i) => {
+    const r = el("div", "cs-item");
+    r.innerHTML = (c.img ? '<img src="' + esc(c.img) + '" alt="">' : '<span class="cs-ph"></span>') +
+      "<span>" + esc(i === 0 ? c.name : c.name) + "</span>";
+    r.onclick = () => { wrap.remove(); go("/channel?c=" + c.id); };
+    body.appendChild(r);
+  });
+  wrap.querySelector(".cs-head button").onclick = () => wrap.remove();
+  wrap.onclick = (e) => { if (e.target === wrap) wrap.remove(); };
+  document.body.appendChild(wrap);
+}
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-collab]");
+  if (!t) return;
+  e.preventDefault(); e.stopPropagation();
+  openCollabSheet(t.dataset.collab);
+}, true);
+
 
 /* ---------------- network core ---------------- */
 let USE_PROXY = S.settings.proxy;
@@ -2342,13 +2525,15 @@ function channelCard(c) {
 function shortCard(v) {
   const id = vidOf(v);
   const c = el("div", "short-card");
+  const t0 = badTitle(v.title) ? "" : v.title;
   c.innerHTML =
     '<div class="sc-thumb"><img loading="lazy" decoding="async" width="320" height="568" src="' + esc(shortThumbUrl(v)) +
       '" onerror="this.src=\'' + esc(thumbUrl(v, "m")) + '\'" alt=""></div>' +
     '<div class="sc-info">' +
-      '<div class="sc-title">' + esc(v.title) + "</div>" +
+      '<div class="sc-title">' + esc(t0) + "</div>" +
       '<div class="sc-views">' + (v.viewCount ? fmtNum(v.viewCount) + "回視聴" : esc(v.publishedText || "")) + "</div>" +
     "</div>";
+  fixTitleLater(c.querySelector(".sc-title"), v);
   c.onclick = () => go("/short/" + id);
   return c;
 }
@@ -2597,8 +2782,10 @@ async function pageSearch(q, page) {
 
 /* ---- watch ---- */
 let hls = null;
-async function pageWatch(id) {
+async function pageWatch(id, startAt) {
   setChips(null);
+  const startSec = Math.max(0, Math.round(startAt || 0));
+  window.__nkysStartAt = startSec;
   if (!id) { view().innerHTML = '<div class="empty">動画が見つかりません</div>'; return; }
 
   /* 通信は即座に開始し、表示は後回しにしない（体感速度優先） */
@@ -2638,7 +2825,7 @@ async function pageWatch(id) {
   $("#side").appendChild(ghostRelated(12));
 
   /* まずポスター画像だけ即表示し、体感の読み込み速度を上げる */
-  mountPlayer(mode0, { poster: guessThumb });
+  mountPlayer(mode0, { poster: guessThumb, start: startSec });
 
   let v;
   try { v = await dataPromise; }
@@ -2675,7 +2862,7 @@ async function pageWatch(id) {
   $(".owner").innerHTML = `
     <img src="${esc(authorImg(v))}" alt="">
     <div>
-      <div class="oname" id="goCh">${esc(v.author || "")}</div>
+      <div class="oname" id="goCh">${collabNameHtml(v.authorId, v.author)}</div>
       <div class="osub">${v.subCount ? fmtNum(v.subCount) + "人の登録者" : (v.subCountText ? esc(v.subCountText) : "")}</div>
     </div>
     <button class="pill ${subbed ? "" : "solid"}" id="btnSub">${subbed ? "登録済み" : "チャンネル登録"}</button>
@@ -2691,6 +2878,7 @@ async function pageWatch(id) {
         <button class="pill player-more" id="btnPlayerMore" type="button" aria-label="その他のプレイヤー操作" aria-expanded="false" title="その他">⋯</button>
         <div class="player-more-menu" id="playerMoreMenu" role="menu" hidden>
           <button type="button" role="menuitem" data-player-action="later">後で見る</button>
+          <button type="button" role="menuitem" data-player-action="share-time">再生時間付きリンクをコピー</button>
           <button type="button" role="menuitem" data-player-action="theater" aria-checked="false">シアターモード</button>
           <button type="button" role="menuitem" data-player-action="pip">ミニプレーヤー</button>
           <div class="pm-sep"></div>
@@ -2718,7 +2906,7 @@ async function pageWatch(id) {
 
   /* 現在のモードでプレーヤーを本再生に切り替え */
   const curMode = $("#playerWrap").dataset.mode || mode0;
-  mountPlayer(curMode, { id, v, streams, autoFallbackTried: false });
+  mountPlayer(curMode, { id, v, streams, autoFallbackTried: false, start: startSec });
   wireModeToggle(id, v);
 
   addHistory(v);
@@ -2782,6 +2970,11 @@ async function pageWatch(id) {
       if (!item) return;
       if (item.dataset.playerAction === "later") addLater();
       if (item.dataset.playerAction === "share") await shareVideo();
+      if (item.dataset.playerAction === "share-time") {
+        const url = location.origin + "/watch?v=" + id + "&t=" + fmtTimeParam(curPlayTime());
+        try { await navigator.clipboard.writeText(url); } catch (_) {}
+        toast("再生時間付きリンクをコピーしました");
+      }
       if (item.dataset.playerAction === "theater") toggleTheater();
       if (item.dataset.playerAction === "pip") openPip();
       if (item.dataset.playerAction === "mode-stream") window.__nkysSetMode && window.__nkysSetMode("stream");
@@ -2815,6 +3008,7 @@ function mountPlayer(mode, opt) {
     f.referrerPolicy = "strict-origin-when-cross-origin";
     f.src = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(opt.id) +
       "?autoplay=" + (S.settings.autoplay ? 1 : 0) + "&rel=0&modestbranding=1&enablejsapi=1" +
+      (opt.start > 0 ? "&start=" + Math.round(opt.start) : "") +
       "&origin=" + encodeURIComponent(location.origin);
     f.dataset.vid = opt.id;
     box.appendChild(f);
@@ -2826,6 +3020,11 @@ function mountPlayer(mode, opt) {
   if (S.settings.autoplay) vp.autoplay = true;
   if (opt.poster) vp.poster = opt.poster;
   box.appendChild(vp);
+  /* &t= で指定された再生開始位置 (秒/分/時) へシーク */
+  if (opt.start > 0) {
+    const seekOnce = () => { try { vp.currentTime = opt.start; } catch (_) {} };
+    vp.addEventListener("loadedmetadata", seekOnce, { once: true });
+  }
   if (opt.streams && opt.streams.length) {
     let start = 0;
     const sel = $("#qsel");
@@ -2848,6 +3047,12 @@ function mountPlayer(mode, opt) {
   keyBindings(vp);
 }
 
+/* いま再生中の位置(秒) — モード切替時に引き継ぐ */
+function curPlayTime() {
+  const vp = document.querySelector("#vp");
+  if (vp && vp.currentTime > 0) return Math.floor(vp.currentTime);
+  return Math.max(0, Math.round(window.__nkysStartAt || 0));
+}
 function wireModeToggle(id, v) {
   /* 再生方法の切り替えは ⋯ メニュー内の項目から行う */
   const qsel = $("#qsel");
@@ -2862,10 +3067,10 @@ function wireModeToggle(id, v) {
   window.__nkysSetMode = (mode) => {
     if (mode === "nocookie") {
       S.settings.playerMode = "nocookie"; saveSettings();
-      mountPlayer("nocookie", { id, v });
+      mountPlayer("nocookie", { id, v, start: curPlayTime() });
     } else {
       S.settings.playerMode = "stream"; saveSettings();
-      mountPlayer("stream", { id, v, streams: window.__nkysStreams, autoFallbackTried: false });
+      mountPlayer("stream", { id, v, streams: window.__nkysStreams, autoFallbackTried: false, start: curPlayTime() });
     }
     sync();
   };
@@ -3188,7 +3393,7 @@ async function pageChannel(cid) {
     '<div class="chHead">' +
       '<div class="chAvatarWrap"><img class="chAvatar" src="' + esc(avatar) + '" alt="' + esc(ch.author) + '"></div>' +
       '<div class="chInfo">' +
-        '<div class="chName">' + esc(ch.author) + verifiedIcon + '</div>' +
+        '<div class="chName">' + esc(ch.author) + verifiedIcon + collabPlusHtml(cid) + '</div>' +
         '<div class="chMetaRow">' +
           (handleTxt ? '<span class="chHandle">' + esc(handleTxt) + '</span>' : '') +
           '<span>チャンネル登録者数 ' + fmtNum(ch.subCount) + '人</span>' +
@@ -3198,6 +3403,7 @@ async function pageChannel(cid) {
         '<div class="chLink" id="chLink"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M10 13a5 5 0 007 0l3-3a5 5 0 10-7-7l-1 1" stroke="currentColor" stroke-width="2" fill="none"/><path d="M14 11a5 5 0 00-7 0l-3 3a5 5 0 107 7l1-1" stroke="currentColor" stroke-width="2" fill="none"/></svg><span>' + esc(chUrl) + '</span></div>' +
         '<div class="chActions"><button class="pill chSubBtn ' + (subbed ? "" : "solid") + '" id="chSub">' +
           (subbed ? '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M9 16.2l-3.5-3.5-1.4 1.4L9 19 20 8l-1.4-1.4z"/></svg>登録済み' : "チャンネル登録") + '</button></div>' +
+        '<div class="chCollab" id="chCollab"></div>' +
       '</div>' +
     '</div>' +
     '<div class="chTabs">' +
@@ -3206,6 +3412,15 @@ async function pageChannel(cid) {
       '<div class="chTab" data-tab="live">ライブ</div>' +
       '<div class="chTab" data-tab="playlists">再生リスト</div>' +
       '<div class="chTab" data-tab="about">概要</div>' +
+      '<div class="chTab chTabSearch" data-tab="search" title="チャンネル内を検索">' +
+        '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16.3 17a8 8 0 111.4-1.4l4 4-1.4 1.4-4-4zM18 11a7 7 0 10-14 0 7 7 0 0014 0z"/></svg></div>' +
+    '</div>' +
+    '<div class="chSearchRow" id="chSearchRow" hidden>' +
+      '<div class="chSearchBox">' +
+        '<svg viewBox="0 0 24 24"><path d="M16.3 17a8 8 0 111.4-1.4l4 4-1.4 1.4-4-4zM18 11a7 7 0 10-14 0 7 7 0 0014 0z"/></svg>' +
+        '<input id="chSearch" type="search" placeholder="チャンネル内を検索" autocomplete="off">' +
+        '<button type="button" id="chSearchClear" aria-label="クリア">✕</button>' +
+      '</div>' +
     '</div>' +
     '<div id="chBody"></div>';
   view().appendChild(head);
@@ -3220,7 +3435,80 @@ async function pageChannel(cid) {
     LS.set("subs", S.subs); renderSubs(); pageChannel(cid);
   };
 
+  /* --- コラボチャンネル --- */
+  const renderCollab = () => {
+    const box = $("#chCollab");
+    if (!box) return;
+    box.innerHTML = "";
+    collabList(cid).forEach((c) => {
+      const chip = el("div", "cc-chip");
+      chip.innerHTML = (c.img ? '<img src="' + esc(c.img) + '" alt="">' : "") + "<b>" + esc(c.name) + "</b><span class=\"cc-x\">✕</span>";
+      chip.onclick = (e) => {
+        if (e.target.classList.contains("cc-x")) {
+          e.stopPropagation();
+          collabRemove(cid, c.id);
+          renderCollab();
+          const nm = document.querySelector(".chName");
+          if (nm) nm.innerHTML = esc(ch.author) + verifiedIcon + collabPlusHtml(cid);
+          return;
+        }
+        go("/channel?c=" + c.id);
+      };
+      box.appendChild(chip);
+    });
+    const add = el("button", "cc-add", "＋ コラボチャンネルを登録");
+    add.onclick = () => openCollabPicker();
+    box.appendChild(add);
+  };
+  const openCollabPicker = () => {
+    const old = document.querySelector(".collab-sheet");
+    if (old) old.remove();
+    const wrap = el("div", "collab-sheet");
+    wrap.innerHTML = '<div class="cs-box"><div class="cs-head">コラボチャンネルを登録<button aria-label="閉じる">✕</button></div>' +
+      '<div class="cs-body"></div>' +
+      '<div style="padding:12px 14px;border-top:1px solid var(--line);display:flex;gap:8px">' +
+      '<input id="ccManual" placeholder="チャンネルID または URL" style="flex:1;min-width:0;background:var(--bg-elev);border:1px solid var(--line);border-radius:8px;color:var(--fg);padding:8px 10px;font-size:13px">' +
+      '<button id="ccManualAdd" class="pill solid">追加</button></div></div>';
+    const body2 = wrap.querySelector(".cs-body");
+    const already = collabList(cid).map((x) => x.id);
+    const cands = (S.subs || []).filter((x) => x.id && x.id !== cid && already.indexOf(x.id) < 0);
+    if (!cands.length) body2.innerHTML = '<div style="padding:14px;color:var(--fg-dim);font-size:13px">登録チャンネルがありません。下のIDから追加できます。</div>';
+    cands.forEach((c) => {
+      const r = el("div", "cs-item");
+      r.innerHTML = (c.img ? '<img src="' + esc(c.img) + '" alt="">' : '<span class="cs-ph"></span>') + "<span>" + esc(c.name || c.id) + "</span>";
+      r.onclick = () => {
+        collabAdd(cid, { id: c.id, name: c.name || c.id, img: c.img || "", baseName: ch.author, baseImg: avatar });
+        wrap.remove(); renderCollab();
+        const nm = document.querySelector(".chName");
+        if (nm) nm.innerHTML = esc(ch.author) + verifiedIcon + collabPlusHtml(cid);
+        toast("コラボチャンネルを登録しました");
+      };
+      body2.appendChild(r);
+    });
+    wrap.querySelector(".cs-head button").onclick = () => wrap.remove();
+    wrap.onclick = (e) => { if (e.target === wrap) wrap.remove(); };
+    document.body.appendChild(wrap);
+    wrap.querySelector("#ccManualAdd").onclick = () => {
+      const raw = (wrap.querySelector("#ccManual").value || "").trim();
+      const m = raw.match(/(UC[\w-]{22})/);
+      const oid = m ? m[1] : raw;
+      if (!oid) return toast("チャンネルIDを入力してください");
+      collabAdd(cid, { id: oid, name: oid, img: "", baseName: ch.author, baseImg: avatar });
+      wrap.remove(); renderCollab();
+      const nm = document.querySelector(".chName");
+      if (nm) nm.innerHTML = esc(ch.author) + verifiedIcon + collabPlusHtml(cid);
+      toast("コラボチャンネルを登録しました");
+    };
+  };
+  renderCollab();
+
   const body = $("#chBody");
+  let chQuery = "";
+  const matchQ = (v) => {
+    if (!chQuery) return true;
+    const t = ((v.title || "") + " " + (v.description || "")).toLowerCase();
+    return chQuery.split(/\s+/).every((w) => t.includes(w));
+  };
   let sortMode = "new";
   const sortVideos = (arr) => {
     const a = arr.slice();
@@ -3243,7 +3531,27 @@ async function pageChannel(cid) {
   let liveCache = null;
   const showTab = async (tab) => {
     document.querySelectorAll(".chTab").forEach((t) => t.classList.toggle("on", t.dataset.tab === tab));
+    const srow = $("#chSearchRow");
+    if (srow) srow.hidden = tab !== "search";
     body.innerHTML = "";
+    if (tab === "search") {
+      const inp = $("#chSearch");
+      if (inp) { inp.value = chQuery; setTimeout(() => inp.focus(), 0); }
+      if (!chQuery) { body.appendChild(el("div", "chSearchInfo", "このチャンネル内のキーワードを入力してください")); return; }
+      if (!shortsCache) {
+        shortsCache = await fetchChannelShorts(cid, allVideos, nav.abort && nav.abort.signal).catch(() => []);
+      }
+      const seenIds = new Set();
+      const hits = [].concat(allVideos, shortsCache || [], liveCache || []).filter((v) => {
+        const vid = vidOf(v);
+        if (!vid || seenIds.has(vid)) return false;
+        seenIds.add(vid);
+        return matchQ(v);
+      });
+      body.appendChild(el("div", "chSearchInfo", hits.length ? fmtNum(hits.length) + "件の結果" : "一致する動画はありません"));
+      if (hits.length) body.appendChild(renderGrid(sortVideos(hits)));
+      return;
+    }
     if (tab === "videos") {
       body.appendChild(sortBar(() => showTab("videos")));
       body.appendChild(renderGrid(sortVideos(allVideos)));
@@ -3317,6 +3625,21 @@ async function pageChannel(cid) {
     }
   };
   document.querySelectorAll(".chTab").forEach((t) => (t.onclick = () => showTab(t.dataset.tab)));
+  const sInput = $("#chSearch");
+  if (sInput) {
+    let tmr = 0;
+    sInput.oninput = () => {
+      clearTimeout(tmr);
+      tmr = setTimeout(() => { chQuery = sInput.value.trim().toLowerCase(); showTab("search"); }, 260);
+    };
+    sInput.onkeydown = (e) => {
+      if (e.key !== "Enter") return;
+      e.preventDefault(); clearTimeout(tmr);
+      chQuery = sInput.value.trim().toLowerCase(); showTab("search");
+    };
+  }
+  const sClear = $("#chSearchClear");
+  if (sClear) sClear.onclick = () => { chQuery = ""; if (sInput) { sInput.value = ""; sInput.focus(); } showTab("search"); };
   showTab("videos");
 }
 
@@ -3607,10 +3930,10 @@ function shortItem(v) {
       '<div class="sh-overlay">' +
         '<div class="sh-owner">' +
           '<img src="' + esc(authorImg(v) || "https://i.ytimg.com/vi/" + id + "/default.jpg") + '" alt="">' +
-          '<span class="sh-name">@' + esc(v.author || "") + "</span>" +
+          '<span class="sh-name">@' + esc(v.author || "") + "</span>" + collabPlusHtml(v.authorId) +
           '<button class="sh-sub">' + (subbed ? "登録済み" : "登録") + "</button>" +
         "</div>" +
-        '<div class="sh-title">' + esc(v.title || "") + "</div>" +
+        '<div class="sh-title">' + esc(badTitle(v.title) ? "" : v.title) + "</div>" +
         '<div class="sh-desc">' + esc(v.description || "") + "</div>" +
         '<div class="sh-views">' + (v.viewCount ? fmtNum(v.viewCount) + "回視聴" : esc(v.publishedText || "")) + "</div>" +
       "</div>" +
@@ -3627,6 +3950,7 @@ function shortItem(v) {
       "</div>" +
     "</div>";
 
+  fixTitleLater(s.querySelector(".sh-title"), v);
   const stage = s.querySelector(".sh-stage");
   /* YouTube Shorts風: 操作UIは常時表示し、カーソル移動を待たず直接操作できる */
   s._uiOn = true;
@@ -4552,7 +4876,9 @@ function renderPage() {
     curList = sp.get("list");
     curListIndex = Math.max(0, parseInt(sp.get("index"), 10) || 0);
     document.title = "再生中 - NKYS Tube Pro";
-    return pageWatch(sp.get("v"));
+    const tRaw = sp.get("t") || sp.get("start") || sp.get("time") ||
+      ((currentPath() + currentSearch() + location.hash).match(/[#&?]t=([^&#]+)/) || [])[1] || "";
+    return pageWatch(sp.get("v"), parseTimeParam(tRaw));
   }
   if (p === "/channel") return pageChannel(sp.get("c"));
   const mShort = p.match(/^\/short\/([\w-]{11})$/i);
