@@ -951,19 +951,30 @@ dialog,
 
 /* ---- スマホ (〜840px) ---- */
 @media(max-width:840px){
-  header{padding:0 8px;gap:4px}
-  .hleft{gap:2px}
-  .hleft .logo{font-size:16px}
+  :root{--hdr:108px}
+  header{height:var(--hdr);padding:6px 10px 8px;display:grid;grid-template-columns:minmax(0,1fr) auto;
+    grid-template-rows:40px 48px;column-gap:6px;row-gap:6px;align-content:center}
+  .hleft{grid-column:1;grid-row:1;gap:2px;min-width:0}
+  .hleft .logo{font-size:17px;letter-spacing:-.5px;overflow:hidden;text-overflow:ellipsis}
   #btnMenu{display:none}
-  .hcenter{flex:1;min-width:0}
-  .searchbox{width:100%}
-  .searchbox .sfield input{font-size:16px}
-  .hright{gap:2px}
+  .hcenter{grid-column:1 / -1;grid-row:2;width:100%;min-width:0;position:relative}
+  .searchbox{width:100%;max-width:none;height:44px;gap:6px}
+  .searchbox .sfield{height:44px;border-radius:22px;background:var(--bg-elev)}
+  .searchbox .sfield input{font-size:16px;padding-left:16px}
+  .searchbox button[type="submit"]{width:52px}
+  .searchbox .voice-search{width:44px;height:44px;margin-left:0;background:var(--bg-elev)}
+  #sugBox{top:48px;left:0;right:0;width:auto;max-height:min(50vh,360px)}
+  .hright{grid-column:2;grid-row:1;gap:0;justify-self:end}
   #btnTheme{display:none}
   main{padding:0 10px calc(74px + env(safe-area-inset-bottom)) !important}
   .icobtn{width:38px;height:38px}
-  #chips{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  #chips{margin:0 -10px;padding:10px 10px 12px;gap:8px;overflow-x:auto;flex-wrap:nowrap;
+    -webkit-overflow-scrolling:touch;scrollbar-width:none;scroll-snap-type:x proximity;
+    border-bottom:1px solid var(--line);box-shadow:8px 0 14px -14px var(--fg) inset}
   #chips::-webkit-scrollbar{display:none}
+  #chips .chip{flex:0 0 auto;min-height:38px;padding:7px 15px;font-size:14px;font-weight:600;
+    scroll-snap-align:start;border-radius:9px;touch-action:manipulation}
+  #chips .chip.on{box-shadow:0 0 0 1px var(--chip-on)}
   .grid,.home-grid{grid-template-columns:1fr !important}
   .card .thumb,.home-video-shelf .card{border-radius:12px}
   .watch{grid-template-columns:1fr;gap:12px}
@@ -991,6 +1002,15 @@ dialog,
   /* ショートはボトムナビ分を差し引いた高さに */
   #shortsView .short{height:calc(100dvh - var(--hdr) - 56px)}
   .short .sh-side{bottom:96px}
+}
+@media(max-width:420px){
+  .hleft .logo{font-size:16px}
+  .logo .mark{width:29px;height:21px}
+  .logo sup{display:none}
+  .avatar{display:none}
+  .searchbox .voice-search{display:none}
+  .searchbox button[type="submit"]{width:48px}
+  #chips .chip{padding-inline:14px}
 }
 @media(max-width:840px) and (orientation:landscape){
   #shortsView .short{height:calc(100dvh - var(--hdr))}
