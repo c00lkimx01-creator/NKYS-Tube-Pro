@@ -928,6 +928,74 @@ dialog,
   .sh-panel { border-radius: 4px 4px 0 0 !important; }
 }
 </style>
+
+<style id="nkys-mobile-ui">
+/* ============ スマホ・タブレット UI ============ */
+#bottomNav{display:none}
+#nkMini{position:fixed;z-index:180;right:16px;bottom:16px;width:min(360px,86vw);background:#000;
+  border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 12px 32px rgba(0,0,0,.55)}
+#nkMini .nkm-frame{position:relative;width:100%;aspect-ratio:16/9;background:#000}
+#nkMini iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+#nkMini .nkm-bar{display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--bg-elev)}
+#nkMini .nkm-title{flex:1;min-width:0;font-size:12px;color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#nkMini .nkm-btn{width:32px;height:32px;flex:0 0 auto;display:grid;place-items:center;background:transparent;border:0;color:var(--fg);cursor:pointer}
+#nkMini .nkm-btn svg{width:18px;height:18px;fill:currentColor}
+#nkMini .nkm-btn:hover{background:var(--bg-hover)}
+
+/* ---- タブレット (841px〜1200px) ---- */
+@media(min-width:841px) and (max-width:1200px){
+  .watch{grid-template-columns:1fr}
+  #chips{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .home-video-shelf .card{min-width:260px;width:260px}
+}
+
+/* ---- スマホ (〜840px) ---- */
+@media(max-width:840px){
+  header{padding:0 8px;gap:4px}
+  .hleft{gap:2px}
+  .hleft .logo{font-size:16px}
+  #btnMenu{display:none}
+  .hcenter{flex:1;min-width:0}
+  .searchbox{width:100%}
+  .searchbox .sfield input{font-size:16px}
+  .hright{gap:2px}
+  #btnTheme{display:none}
+  main{padding:0 10px calc(74px + env(safe-area-inset-bottom)) !important}
+  .icobtn{width:38px;height:38px}
+  #chips{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  #chips::-webkit-scrollbar{display:none}
+  .grid,.home-grid{grid-template-columns:1fr !important}
+  .card .thumb,.home-video-shelf .card{border-radius:12px}
+  .watch{grid-template-columns:1fr;gap:12px}
+  #playerWrap{border-radius:0;margin:0 -10px;width:calc(100% + 20px)}
+  .vtitle,#vtitle{font-size:17px;line-height:1.35}
+  .rowbtns,.actions{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .rowbtns::-webkit-scrollbar,.actions::-webkit-scrollbar{display:none}
+  button,.pill,.chip,.snav{min-height:40px}
+  dialog{width:96vw;max-height:86vh;overflow:auto}
+
+  /* ボトムナビ */
+  #bottomNav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:120;
+    background:var(--bg);border-top:1px solid var(--line);
+    padding:4px 2px calc(4px + env(safe-area-inset-bottom));justify-content:space-around}
+  #bottomNav .bn-item{flex:1;min-width:0;background:transparent;border:0;color:var(--fg-dim);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    font-size:10px;padding:4px 0;cursor:pointer}
+  #bottomNav .bn-item svg{width:22px;height:22px;fill:currentColor}
+  #bottomNav .bn-item.on{color:var(--fg);font-weight:600}
+  body.is-shorts #bottomNav{background:rgba(0,0,0,.92);border-top-color:rgba(255,255,255,.12)}
+
+  /* ミニプレーヤーはボトムナビの上に配置 */
+  #nkMini{right:8px;left:8px;width:auto;bottom:calc(60px + env(safe-area-inset-bottom))}
+
+  /* ショートはボトムナビ分を差し引いた高さに */
+  #shortsView .short{height:calc(100dvh - var(--hdr) - 56px)}
+  .short .sh-side{bottom:96px}
+}
+@media(max-width:840px) and (orientation:landscape){
+  #shortsView .short{height:calc(100dvh - var(--hdr))}
+}
+</style>
 </head>
 <body>
 
@@ -1064,9 +1132,10 @@ const WORKER_API = "https://dark-sun-c226.c00lkimx01.workers.dev";
 const STREAM_PRIMARY = WORKER_API;
 
 /* Invidious ストリーム取得の主力 */
+const OMADA = "https://yt.omada.cafe";
 const INV_STREAM = [
+  OMADA,
   WORKER_API,
-  "https://yt.omada.cafe",
   "https://inv.nadeko.net",
   "https://invidious.nerdvpn.de",
   "https://iv.melmac.space",
@@ -1287,8 +1356,28 @@ function pipedToInvidious(d, id) {
   };
 }
 
-/* 動画データ: Piped を主・Invidious を副として同時に取得し、
-   ストリームが取れた方を採用する。両方だめなら nocookie 埋め込みに委ねる。 */
+/* yt.omada.cafe: ストリーム取得の主力ソース（Invidious 互換） */
+async function omadaVideo(id, signal) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 7000);
+  const onAbort = () => ctl.abort();
+  if (signal) signal.addEventListener("abort", onAbort, { once: true });
+  try {
+    const r = await fetch(OMADA + "/api/v1/videos/" + encodeURIComponent(id) + "?local=true",
+      { signal: ctl.signal, headers: { accept: "application/json" } });
+    if (!r.ok) throw new Error("omada " + r.status);
+    const d = await r.json();
+    if (!d || (!d.formatStreams && !d.adaptiveFormats && !d.hlsUrl)) throw new Error("omada empty");
+    d.__src = "omada";
+    return d;
+  } finally {
+    clearTimeout(t);
+    if (signal) signal.removeEventListener("abort", onAbort);
+  }
+}
+
+/* 動画データ: yt.omada.cafe を主・Piped / Invidious を副として同時に取得し、
+   ストリームが取れたものを採用する。全部だめなら nocookie 埋め込みに委ねる。 */
 async function getVideo(id, signal) {
   const path = "/api/v1/videos/" + encodeURIComponent(id);
   const key = "video|" + id;
@@ -1296,6 +1385,7 @@ async function getVideo(id, signal) {
   if (c && Date.now() - c.at < TTL) return c.v;
   if (inflight.has(key)) return inflight.get(key);
   const p = (async () => {
+    const omadaP = omadaVideo(id, signal).catch(() => null);
     const pipedP = pipedGet("/streams/" + encodeURIComponent(id), signal)
       .then((d) => pipedToInvidious(d, id))
       .catch(() => null);
@@ -1306,6 +1396,9 @@ async function getVideo(id, signal) {
     /* invidiousapi: メタ情報 / 関連動画のフォールバック */
     const nivP = nivVideo(id, signal).catch(() => null);
 
+    const omada = await omadaP;
+    if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
+    if (hasStreams(omada)) { cache.set(key, { v: omada, at: Date.now() }); return omada; }
     const inv = await invP;
     if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
     if (hasStreams(inv)) { cache.set(key, { v: inv, at: Date.now() }); return inv; }
@@ -1315,7 +1408,7 @@ async function getVideo(id, signal) {
     if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
     const niv = await nivP;
     if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
-    const v = hasStreams(piped) ? piped : (inv || piped || niv || yta);
+    const v = hasStreams(piped) ? piped : (omada || inv || piped || niv || yta);
     /* メタ情報が欠けていれば invidiousapi の情報で補完する */
     if (v && niv) {
       if (!v.title) v.title = niv.title;
@@ -2652,8 +2745,9 @@ async function pageWatch(id) {
   };
   const openPip = () => {
     const vp = $("#vp");
-    if (vp && vp.requestPictureInPicture) vp.requestPictureInPicture().catch(() => {});
-    else toast("Nocookie 再生中はミニプレーヤーを利用できません");
+    if (vp && vp.requestPictureInPicture) { vp.requestPictureInPicture().catch(() => {}); return; }
+    if (window.__nkOpenNocookieMini && window.__nkOpenNocookieMini()) return;
+    toast("ミニプレーヤーを利用できません");
   };
   window.__nkysToggleTheater = toggleTheater;
   window.__nkysOpenPip = openPip;
@@ -2700,8 +2794,11 @@ function mountPlayer(mode, opt) {
     f.allow = "autoplay; encrypted-media; picture-in-picture";
     f.referrerPolicy = "strict-origin-when-cross-origin";
     f.src = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(opt.id) +
-      "?autoplay=" + (S.settings.autoplay ? 1 : 0) + "&rel=0&modestbranding=1";
+      "?autoplay=" + (S.settings.autoplay ? 1 : 0) + "&rel=0&modestbranding=1&enablejsapi=1" +
+      "&origin=" + encodeURIComponent(location.origin);
+    f.dataset.vid = opt.id;
     box.appendChild(f);
+    window.__nkTrackNocookie && window.__nkTrackNocookie(f, opt.id, opt.v);
     return;
   }
   const vp = el("video");
@@ -4603,6 +4700,171 @@ $("#setNocookieDefault").onchange = (e) => { S.settings.playerMode = e.target.ch
 api("trending", "/api/v1/trending?region=" + RG() + "").catch(() => {});
 renderSubs();
 render();
+
+
+
+/* =============================================================
+   スマホ / タブレット UI + Nocookie ミニプレーヤー
+   （既存動作を壊さないよう、既存関数を包む形で追加）
+   ============================================================= */
+(function () {
+  /* ---- ボトムナビ（スマホ / 小型タブレット） ---- */
+  const BOTTOM = [
+    { nav: "home", path: "/", label: "ホーム", d: "m11.485 2.143-8 4.8-2 1.2a1 1 0 001.03 1.714L3 9.567V20a2 2 0 002 2h5v-8h4v8h5a2 2 0 002-2V9.567l.485.29a1 1 0 001.03-1.714l-2-1.2-8-4.8a1 1 0 00-1.03 0Z" },
+    { nav: "shorts", path: "/shorts", label: "ショート", d: "M15 12l-5-3v6l5-3Zm-1.533-10.81-8 4.7a5 5 0 00-.255 8.46 5 5 0 005.32 8.462l8-4.7a5 5 0 00.258-8.462 5 5 0 001.641-6.464l-.12-.217a5 5 0 00-6.844-1.78Z" },
+    { nav: "subs", path: "/subs", label: "登録", d: "M18 1H6a2 2 0 00-2 2h16a2 2 0 00-2-2Zm3 4H3a2 2 0 00-2 2v13a2 2 0 002 2h18a2 2 0 002-2V7a2 2 0 00-2-2ZM3 20V7h18v13H3Zm13-6.5L10 10v7l6-3.5Z" },
+    { nav: "mypage", path: "/mypage", label: "あなた", d: "M12 1C5.925 1 1 5.925 1 12s4.925 11 11 11 11-4.925 11-11S18.075 1 12 1Zm0 4a4 4 0 110 8 4 4 0 010-8Zm-.1 11.001L11.899 16a5 5 0 014.904 3.61A8.96 8.96 0 0112 21a8.96 8.96 0 01-4.804-1.391 5 5 0 014.704-3.608Z" },
+  ];
+  const bn = document.createElement("nav");
+  bn.id = "bottomNav";
+  bn.innerHTML = BOTTOM.map((b) =>
+    '<button type="button" class="bn-item" data-nav="' + b.nav + '" data-path="' + b.path + '">' +
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + b.d + '"/></svg><span>' + b.label + '</span></button>').join("");
+  document.body.appendChild(bn);
+
+  function syncBottom() {
+    const path = currentPath();
+    bn.querySelectorAll(".bn-item").forEach((n) => {
+      const p = n.dataset.path;
+      n.classList.toggle("on", p === "/" ? path === "/" : path.indexOf(p) === 0);
+    });
+    document.body.classList.toggle("is-watch", /^\/watch/.test(path));
+    document.body.classList.toggle("is-shorts", /^\/shorts/.test(path));
+  }
+
+  /* ---- Nocookie ミニプレーヤー ---- */
+  const mini = document.createElement("div");
+  mini.id = "nkMini";
+  mini.hidden = true;
+  mini.innerHTML =
+    '<div class="nkm-frame"></div>' +
+    '<div class="nkm-bar">' +
+      '<div class="nkm-title"></div>' +
+      '<button type="button" class="nkm-btn" data-a="expand" aria-label="拡大"><svg viewBox="0 0 24 24"><path d="M4 4h6v2H6v4H4V4zm10 0h6v6h-2V6h-4V4zM4 14h2v4h4v2H4v-6zm14 0h2v6h-6v-2h4v-4z"/></svg></button>' +
+      '<button type="button" class="nkm-btn" data-a="close" aria-label="閉じる"><svg viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>' +
+    '</div>';
+  document.body.appendChild(mini);
+
+  const track = { id: "", time: 0, title: "", timer: 0, frame: null };
+
+  window.__nkTrackNocookie = function (frame, id, v) {
+    track.frame = frame; track.id = id; track.time = 0;
+    track.title = (v && v.title) || (document.querySelector("#vtitle") || {}).textContent || "";
+    clearInterval(track.timer);
+    track.timer = setInterval(() => {
+      if (!frame.isConnected) { clearInterval(track.timer); return; }
+      try {
+        frame.contentWindow.postMessage(JSON.stringify({ event: "listening", id: 1 }), "*");
+      } catch (_) {}
+    }, 1000);
+  };
+
+  window.addEventListener("message", (e) => {
+    if (!/youtube(-nocookie)?\.com$/.test((e.origin || "").replace(/^https?:\/\/(www\.)?/, ""))) return;
+    let d; try { d = typeof e.data === "string" ? JSON.parse(e.data) : e.data; } catch (_) { return; }
+    if (!d || !d.info) return;
+    if (track.frame && track.frame.contentWindow === e.source && typeof d.info.currentTime === "number") {
+      track.time = d.info.currentTime;
+    }
+    const mf = mini.querySelector("iframe");
+    if (mf && mf.contentWindow === e.source && typeof d.info.currentTime === "number") {
+      mini.dataset.time = String(Math.floor(d.info.currentTime));
+    }
+  });
+
+  function openMini(id, time, title) {
+    if (!id) return false;
+    const box = mini.querySelector(".nkm-frame");
+    box.innerHTML = "";
+    const f = document.createElement("iframe");
+    f.allow = "autoplay; encrypted-media; picture-in-picture";
+    f.allowFullscreen = true;
+    f.referrerPolicy = "strict-origin-when-cross-origin";
+    f.src = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(id) +
+      "?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&start=" + Math.max(0, Math.floor(time || 0)) +
+      "&origin=" + encodeURIComponent(location.origin);
+    box.appendChild(f);
+    mini.dataset.vid = id;
+    mini.dataset.time = String(Math.floor(time || 0));
+    mini.querySelector(".nkm-title").textContent = title || "";
+    mini.hidden = false;
+    document.body.classList.add("has-mini");
+    setInterval__mini(f);
+    return true;
+  }
+  let miniTimer = 0;
+  function setInterval__mini(f) {
+    clearInterval(miniTimer);
+    miniTimer = setInterval(() => {
+      if (!f.isConnected) { clearInterval(miniTimer); return; }
+      try { f.contentWindow.postMessage(JSON.stringify({ event: "listening", id: 1 }), "*"); } catch (_) {}
+    }, 1000);
+  }
+  function closeMini() {
+    clearInterval(miniTimer);
+    mini.querySelector(".nkm-frame").innerHTML = "";
+    mini.hidden = true;
+    mini.dataset.vid = "";
+    document.body.classList.remove("has-mini");
+  }
+  window.__nkCloseMini = closeMini;
+
+  /* ⋯ メニュー / I キーからの呼び出し */
+  window.__nkOpenNocookieMini = function () {
+    const f = document.querySelector("#playerWrap iframe#ytFrame");
+    if (!f) return false;
+    const id = f.dataset.vid || track.id;
+    if (!id) return false;
+    const ok = openMini(id, track.time, track.title || (document.querySelector("#vtitle") || {}).textContent || "");
+    if (ok && /^\/watch/.test(currentPath())) go("/");
+    return ok;
+  };
+
+  mini.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-a]");
+    if (!b) return;
+    if (b.dataset.a === "close") { closeMini(); return; }
+    if (b.dataset.a === "expand") {
+      const id = mini.dataset.vid, t = mini.dataset.time || "0";
+      closeMini();
+      if (id) go("/watch?v=" + id + "&t=" + t);
+    }
+  });
+
+  /* 画面遷移: 視聴ページを離れる際、nocookie 再生中ならミニプレーヤーへ引き継ぐ */
+  const _go = go;
+  go = function (path, replace) {
+    try {
+      const leaving = /^\/watch/.test(currentPath()) && !/^\/watch/.test(String(path));
+      if (leaving) {
+        const f = document.querySelector("#playerWrap iframe#ytFrame");
+        if (f && !mini.dataset.vid) openMini(f.dataset.vid || track.id, track.time, track.title);
+      }
+      /* 同じ動画をミニから開き直した場合はミニを閉じる */
+      if (/^\/watch/.test(String(path)) && mini.dataset.vid && String(path).indexOf(mini.dataset.vid) >= 0) closeMini();
+    } catch (_) {}
+    const r = _go(path, replace);
+    syncBottom();
+    return r;
+  };
+  addEventListener("popstate", syncBottom);
+  addEventListener("hashchange", syncBottom);
+  syncBottom();
+
+  /* タブレットではサイドバーを既定でミニ表示にする */
+  function applyBreakpoint() {
+    const w = innerWidth;
+    const sb = document.getElementById("sidebar"), mn = document.getElementById("main");
+    if (!sb || !mn) return;
+    if (w <= 840) {
+      sb.classList.remove("mini"); mn.classList.remove("mini");
+    } else if (w <= 1200) {
+      sb.classList.add("mini"); mn.classList.add("mini"); sb.classList.remove("open");
+    }
+  }
+  applyBreakpoint();
+  addEventListener("resize", applyBreakpoint, { passive: true });
+})();
 
 /* UI scroll behavior */
 document.addEventListener("scroll",function(){
