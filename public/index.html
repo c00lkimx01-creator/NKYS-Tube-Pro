@@ -22,6 +22,8 @@
 <link rel="dns-prefetch" href="https://www.youtube-nocookie.com" />
 <link rel="preconnect" href="https://yt.omada.cafe" crossorigin />
 <link rel="dns-prefetch" href="https://yt.omada.cafe" />
+<link rel="preconnect" href="https://invidiousapi-rjbqebgk.manus.space" crossorigin />
+<link rel="dns-prefetch" href="https://invidiousapi-rjbqebgk.manus.space" />
 <link rel="preconnect" href="https://siatube.com" crossorigin />
 <link rel="preconnect" href="https://ytapi-btpnydgm.manus.space" crossorigin />
 <link rel="dns-prefetch" href="https://ytapi-btpnydgm.manus.space" />
@@ -1301,6 +1303,8 @@ async function getVideo(id, signal) {
       .catch(() => race(POOLS.video, path, signal, { wave: 6, timeouts: [8000] }).catch(() => null));
     /* ytapi: ストリームを持たないため、両方失敗時のメタ情報フォールバックとして併走 */
     const ytaP = ytaVideo(id, signal).catch(() => null);
+    /* invidiousapi: メタ情報 / 関連動画のフォールバック */
+    const nivP = nivVideo(id, signal).catch(() => null);
 
     const inv = await invP;
     if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
@@ -1309,7 +1313,20 @@ async function getVideo(id, signal) {
     if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
     const yta = await ytaP;
     if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
-    const v = hasStreams(piped) ? piped : (inv || piped || yta);
+    const niv = await nivP;
+    if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
+    const v = hasStreams(piped) ? piped : (inv || piped || niv || yta);
+    /* メタ情報が欠けていれば invidiousapi の情報で補完する */
+    if (v && niv) {
+      if (!v.title) v.title = niv.title;
+      if (!v.author) v.author = niv.author;
+      if (!v.authorId) v.authorId = niv.authorId;
+      if (!v.description) v.description = niv.description;
+      if (!v.viewCount) v.viewCount = niv.viewCount;
+      if (!v.likeCount) v.likeCount = niv.likeCount;
+      if (!v.publishedText) v.publishedText = niv.publishedText;
+      if (!(v.recommendedVideos || []).length) v.recommendedVideos = niv.recommendedVideos;
+    }
     if (!v) throw new Error("video unavailable");
     cache.set(key, { v, at: Date.now() });
     return v;
@@ -1642,8 +1659,18 @@ async function wkShorts(id, signal) {
 }
 /* 関連ショートを配列で返す(重複除去つき) */
 async function wkRelatedShorts(id, signal, withCurrent) {
-  let r = null;
-  try { r = await wkShorts(id || "", signal); } catch (_) { return []; }
+  /* Worker と invidiousapi の両方に投げ、先に届いた方（両方届けば統合）を使う */
+  const [a, b] = await Promise.allSettled([
+    wkShorts(id || "", signal),
+    id ? nivShorts(id, signal) : Promise.reject(new Error("skip")),
+  ]);
+  const r = {
+    current: (a.status === "fulfilled" && a.value.current) || (b.status === "fulfilled" && b.value.current) || null,
+    sequence: []
+      .concat(a.status === "fulfilled" ? a.value.sequence || [] : [])
+      .concat(b.status === "fulfilled" ? b.value.sequence || [] : []),
+  };
+  if (!r.current && !r.sequence.length) return [];
   const src = (withCurrent && r.current ? [r.current] : []).concat(r.sequence || []);
   const out = [];
   src.forEach((v) => {
@@ -1678,6 +1705,112 @@ function wkChannelVideos(d) {
 async function wkChannelStreams(cid, signal) {
   try { return wkChannelVideos(await wkChannel(cid, signal)); } catch (_) { return []; }
 }
+
+
+/* ---------------- Invidious 互換 API (invidiousapi-rjbqebgk.manus.space) ----------------
+   /api/v1/trends            : HOME のトレンド（最速表示の主ソース）
+   /api/v1/videos/{videoID}  : 動画メタ情報 + 関連動画
+   /api/v1/shorts/{videoID}  : ショート情報 + 関連ショート(embedUrl 付き)
+   /api/v1/comments/{videoID}: コメント（Worker / siatube が使えないときの代用）
+   すべて失敗しても既存の取得経路にフォールバックする(表示は壊さない)          */
+const NIV = "https://invidiousapi-rjbqebgk.manus.space";
+async function nivGet(path, signal, ms) {
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), ms || 8000);
+  const onAbort = () => ac.abort();
+  if (signal) { if (signal.aborted) ac.abort(); else signal.addEventListener("abort", onAbort); }
+  try {
+    const r = await fetch(NIV + path, { signal: ac.signal, headers: { accept: "application/json" } });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const d = await r.json();
+    if (d && d.error) throw new Error(String(d.error));
+    return d;
+  } finally {
+    clearTimeout(t);
+    if (signal) { try { signal.removeEventListener("abort", onAbort); } catch (_) {} }
+  }
+}
+function nivNormVideo(x) {
+  if (!x) return null;
+  const id = x.videoId || x.id;
+  if (!id || !/^[\w-]{11}$/.test(id)) return null;
+  const th = ((x.videoThumbnails || []).map((t) => t && t.url).filter(Boolean)[0]) || x.thumbnail || "";
+  return {
+    type: "video",
+    videoId: id,
+    title: x.title || "",
+    author: x.author || "",
+    authorId: x.authorId || "",
+    authorThumbnails: x.authorThumbnails || [],
+    lengthSeconds: Number(x.lengthSeconds) || 0,
+    viewCount: Number(x.viewCount) || 0,
+    published: Number(x.published) || 0,
+    publishedText: x.publishedText || "",
+    description: x.description || "",
+    liveNow: !!x.liveNow,
+    isShort: !!x.isShort,
+    __thumb: th,
+    __src: "niv",
+  };
+}
+/* HOME トレンド */
+async function nivTrends(signal) {
+  const d = await nivGet("/api/v1/trends", signal, 7000);
+  const out = ((d && (d.results || d.videos || d.items)) || []).map(nivNormVideo).filter(Boolean);
+  if (!out.length) throw new Error("niv trends unavailable");
+  return out;
+}
+/* 動画メタ情報（ストリームは持たない） */
+async function nivVideo(id, signal) {
+  const d = await nivGet("/api/v1/videos/" + encodeURIComponent(id), signal);
+  const v = nivNormVideo(d);
+  if (!v) throw new Error("niv video unavailable");
+  v.descriptionHtml = d.descriptionHtml || "";
+  v.likeCount = Number(d.likeCount) || 0;
+  v.subCountText = d.subCountText || "";
+  v.dashUrl = d.dashUrl || "";
+  v.formatStreams = [];
+  v.adaptiveFormats = [];
+  v.recommendedVideos = (d.recommendedVideos || []).map(nivNormVideo).filter(Boolean);
+  return v;
+}
+/* ショート本体 + 関連ショート（embedUrl をそのまま利用できる） */
+function nivShortNorm(x) {
+  const v = nivNormVideo(x);
+  if (!v) return null;
+  v.isShort = true;
+  if (x.embedUrl) v.__embedUrl = x.embedUrl;
+  return v;
+}
+async function nivShorts(id, signal) {
+  const d = await nivGet("/api/v1/shorts/" + encodeURIComponent(id || ""), signal);
+  const seq = (d && (d.sequence || d.related || d.results)) || [];
+  return {
+    current: nivShortNorm(d && d.current),
+    sequence: (Array.isArray(seq) ? seq : []).map(nivShortNorm).filter(Boolean),
+  };
+}
+/* コメント */
+async function nivComments(id, signal) {
+  const d = await nivGet("/api/v1/comments/" + encodeURIComponent(id), signal);
+  const list = (d && d.comments) || [];
+  if (!list.length) throw new Error("niv comments unavailable");
+  return {
+    commentCount: d.commentCount || list.length,
+    comments: list.map((c) => ({
+      author: c.author || "",
+      authorId: c.authorId || "",
+      authorThumbnails: c.authorThumbnails || [],
+      content: c.content || "",
+      publishedText: c.publishedText || "",
+      likeCount: Number(c.likeCount) || 0,
+      isPinned: !!c.isPinned,
+      creatorHeart: !!c.creatorHeart,
+      replies: c.replies,
+    })),
+  };
+}
+
 
 /* 動画IDを確実に取得する（Piped/Invidious/shorts URL いずれにも対応） */
 function vidOf(v) {
@@ -1888,7 +2021,11 @@ async function homeFeed(chip, signal) {
   const pipedPath = q
     ? "/search?q=" + encodeURIComponent(q) + "&filter=videos"
     : "/trending?region=" + RG();
-  let pipedResult = null, ytaResult = null;
+  let pipedResult = null, ytaResult = null, nivResult = null;
+  /* HOME トレンドは invidiousapi の /api/v1/trends を最速ソースとして併走 */
+  const t0 = (q ? Promise.reject(new Error("skip")) : nivTrends(signal))
+    .then((v) => { nivResult = { status: "fulfilled", value: v }; })
+    .catch((e) => { nivResult = { status: "rejected", reason: e }; });
   const t1 = pipedGet(pipedPath, signal)
     .then((v) => { pipedResult = { status: "fulfilled", value: v }; })
     .catch((e) => { pipedResult = { status: "rejected", reason: e }; });
@@ -1896,8 +2033,8 @@ async function homeFeed(chip, signal) {
     .then((v) => { ytaResult = { status: "fulfilled", value: v }; })
     .catch((e) => { ytaResult = { status: "rejected", reason: e }; });
   await Promise.race([
-    Promise.all([t1, t2]),
-    Promise.race([t1, t2]).then(() => new Promise((r) => setTimeout(r, 1500))),
+    Promise.all([t0, t1, t2]),
+    Promise.race([t0, t1, t2]).then(() => new Promise((r) => setTimeout(r, 1500))),
     new Promise((r) => setTimeout(r, 12000)),
   ]);
   if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
@@ -1907,6 +2044,10 @@ async function homeFeed(chip, signal) {
     if (!id || seen.has(id)) return;
     v.videoId = id; seen.add(id); merged.push(v);
   };
+  /* トレンドを先頭に並べる（最速で届いたものから表示） */
+  if (nivResult && nivResult.status === "fulfilled") {
+    (nivResult.value || []).forEach(add);
+  }
   if (pipedResult && pipedResult.status === "fulfilled") {
     const items = Array.isArray(pipedResult.value) ? pipedResult.value : ((pipedResult.value && (pipedResult.value.items || pipedResult.value.relatedStreams)) || []);
     items.filter((v) => v && (v.type === "stream" || v.videoId || v.url))
@@ -2672,6 +2813,11 @@ async function getComments(id, signal) {
     if (d && (d.comments || []).length) return d;
 
   } catch (_) {}
+  /* Worker / siatube が使えないときは invidiousapi のコメントを代用 */
+  try {
+    const n = await nivComments(id, signal);
+    if (n && n.comments.length) return n;
+  } catch (_) {}
   const d = await pipedGet("/comments/" + encodeURIComponent(id), signal);
   return {
     commentCount: d.commentCount,
@@ -2818,30 +2964,33 @@ function siaChannelShorts(d) {
 }
 /* チャンネル情報: ytapi / siatube を主軸に、Invidious・Piped で欠けた項目を補完 */
 async function fetchChannelData(cid, signal) {
-  const [inv, invVids, piped, sia, yta] = await Promise.allSettled([
+  const [inv, invVids, piped, sia, yta, wk] = await Promise.allSettled([
     api("channel", "/api/v1/channels/" + cid, { signal }),
     api("channel", "/api/v1/channels/" + cid + "/videos", { signal }),
     pipedGet("/channel/" + encodeURIComponent(cid), signal),
     siaChannel(cid, signal),
     ytaChannel(cid, signal),
+    wkChannel(cid, signal),
   ]);
+  const W = wk.status === "fulfilled" ? wk.value : null;
   const I = inv.status === "fulfilled" ? inv.value : null;
   const P = piped.status === "fulfilled" ? piped.value : null;
   const X = sia.status === "fulfilled" ? sia.value : null;
   const Y = yta.status === "fulfilled" ? yta.value : null;
-  if (!I && !P && !X && !Y) throw new Error("channel not found");
+  if (!I && !P && !X && !Y && !W) throw new Error("channel not found");
 
   const ch = {
-    author: (Y && Y.name) || (X && X.title) || (I && I.author) || (P && P.name) || "",
+    author: (Y && Y.name) || (X && X.title) || (I && I.author) || (P && P.name) || (W && (W.author || W.title)) || "",
     authorId: cid,
     authorHandle: (I && I.authorHandle) || "",
-    subCount: (Y && Y.subCount) || (I && I.subCount) || (P && P.subscriberCount) || (X ? siaNum(X.videoCount) : 0),
-    description: (Y && Y.description) || (X && X.description) || (I && I.description) || (P && P.description) || "",
+    subCount: (Y && Y.subCount) || (I && I.subCount) || (W && W.subCount) || (P && P.subscriberCount) || (X ? siaNum(X.videoCount) : 0),
+    description: (Y && Y.description) || (X && X.description) || (I && I.description) || (P && P.description) || (W && W.description) || "",
     authorVerified: !!((Y && Y.verified) || (I && I.authorVerified) || (P && P.verified)),
     authorThumbnails: (Y && Y.avatar ? [{ url: Y.avatar }]
       : (X && X.avatar ? [{ url: X.avatar }]
         : (I && I.authorThumbnails && I.authorThumbnails.length ? I.authorThumbnails
-          : (P && P.avatarUrl ? [{ url: P.avatarUrl }] : [])))),
+          : (P && P.avatarUrl ? [{ url: P.avatarUrl }]
+            : ((W && W.authorThumbnails && W.authorThumbnails.length) ? W.authorThumbnails : []))))),
     authorBanners: (Y && Y.banner ? [{ url: Y.banner }]
       : (X && X.banner ? [{ url: X.banner }]
         : (I && I.authorBanners && I.authorBanners.length ? I.authorBanners
@@ -2859,6 +3008,8 @@ async function fetchChannelData(cid, signal) {
   }
   if (I && I.latestVideos) I.latestVideos.forEach(push);
   if (P && Array.isArray(P.relatedStreams)) P.relatedStreams.map(normPipedVideo).forEach(push);
+  /* Worker のチャンネル動画も統合（他ソースが落ちても一覧が空にならない） */
+  if (W) wkChannelVideos(W).forEach(push);
 
   return { ch, videos, sia: X };
 }
