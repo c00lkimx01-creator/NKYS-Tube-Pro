@@ -1652,6 +1652,8 @@ async function getVideo(id, signal) {
     const ytaP = ytaVideo(id, signal).catch(() => null);
     /* invidiousapi: メタ情報 / 関連動画のフォールバック */
     const nivP = nivVideo(id, signal).catch(() => null);
+    /* Worker API: /api/v1/videos/{videoid}（メタ情報 / 関連動画の追加ソース） */
+    const wkP = wkVideo(id, signal).catch(() => null);
 
     const omada = await omadaP;
     if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
@@ -1665,7 +1667,20 @@ async function getVideo(id, signal) {
     if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
     const niv = await nivP;
     if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
-    const v = hasStreams(piped) ? piped : (omada || inv || piped || niv || yta);
+    const wkv = await wkP;
+    if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
+    const v = hasStreams(piped) ? piped : (omada || inv || piped || niv || wkv || yta);
+    /* メタ情報が欠けていれば Worker API の情報で補完する */
+    if (v && wkv) {
+      if (!v.title) v.title = wkv.title;
+      if (!v.author) v.author = wkv.author;
+      if (!v.authorId) v.authorId = wkv.authorId;
+      if (!v.authorThumbnails || !v.authorThumbnails.length) v.authorThumbnails = wkv.authorThumbnails || [];
+      if (!v.description) v.description = wkv.description;
+      if (!v.viewCount) v.viewCount = wkv.viewCount;
+      if (!v.publishedText) v.publishedText = wkv.publishedText;
+      if (!(v.recommendedVideos || []).length) v.recommendedVideos = wkv.recommendedVideos;
+    }
     /* メタ情報が欠けていれば invidiousapi の情報で補完する */
     if (v && niv) {
       if (!v.title) v.title = niv.title;
@@ -2030,13 +2045,25 @@ async function wkRelatedShorts(id, signal, withCurrent) {
   });
   return out;
 }
-/* チャンネル情報 (Worker) */
-async function wkChannel(cid, signal) { return wkGet("/api/v1/channels/" + encodeURIComponent(cid), signal); }
+/* チャンネル情報 (Worker)
+   新API: /api/v1/channels/{channelIDまたは@handle}?tab=videos|shorts|playlists|home&sort=latest
+   tab を省略した場合は従来通りのパスで取得する（後方互換） */
+const WK_SORT = { new: "latest", pop: "popular", old: "oldest" };
+async function wkChannel(cid, signal, tab, sort) {
+  let p = "/api/v1/channels/" + encodeURIComponent(cid);
+  const qs = [];
+  if (tab) qs.push("tab=" + encodeURIComponent(tab));
+  if (tab) qs.push("sort=" + encodeURIComponent(WK_SORT[sort] || sort || "latest"));
+  if (qs.length) p += "?" + qs.join("&");
+  return wkGet(p, signal);
+}
 function wkChannelVideos(d) {
-  const arr = (d && (d.latestVideos || d.videos || d.items || d.relatedStreams || d.content)) || [];
+  const arr = (d && (d.contents || d.latestVideos || d.videos || d.items || d.relatedStreams || d.content)) || [];
   return (Array.isArray(arr) ? arr : []).map((it) => {
     const id = it && (it.videoId || it.id);
     if (!id || !/^[\w-]{11}$/.test(id)) return null;
+    if (it.type && it.type !== "video" && it.type !== "shortVideo" && it.type !== "livestream") return null;
+    const th = ((it.videoThumbnails || []).map((t) => t && t.url).filter(Boolean)[0]) || it.thumbnail || "";
     return {
       videoId: id,
       title: it.title || "",
@@ -2048,13 +2075,73 @@ function wkChannelVideos(d) {
       published: it.published || 0,
       publishedText: it.publishedText || it.uploadedDate || "",
       isShort: !!it.isShort,
+      __thumb: th,
     };
   }).filter(Boolean);
 }
+/* タブ指定でチャンネルの動画一覧を取得（失敗しても空配列で既存経路に任せる） */
+async function wkChannelTab(cid, tab, sort, signal) {
+  try { return wkChannelVideos(await wkChannel(cid, signal, tab, sort)); } catch (_) { return []; }
+}
+/* チャンネルのショート (tab=shorts) */
+async function wkChannelShorts(cid, sort, signal) {
+  return (await wkChannelTab(cid, "shorts", sort, signal)).map((v) => { v.isShort = true; return v; });
+}
+/* チャンネルの再生リスト (tab=playlists) */
+async function wkChannelPlaylists(cid, sort, signal) {
+  let d = null;
+  try { d = await wkChannel(cid, signal, "playlists", sort); } catch (_) { return []; }
+  const arr = (d && (d.contents || d.playlists || d.items)) || [];
+  return (Array.isArray(arr) ? arr : []).map((p) => {
+    const pid = p && (p.playlistId || p.id);
+    if (!pid) return null;
+    return {
+      playlistId: pid,
+      title: p.title || "再生リスト",
+      videoCount: p.videoCount || 0,
+      author: p.author || (d && d.author) || "",
+      authorId: p.authorId || (d && d.authorId) || "",
+      playlistThumbnail: p.thumbnail || "",
+      videos: [],
+    };
+  }).filter(Boolean);
+}
+/* 再生リストの中身: /api/v1/playlists/{playlistID} */
+async function wkPlaylist(pid, signal) {
+  try {
+    const d = await wkGet("/api/v1/playlists/" + encodeURIComponent(pid), signal);
+    const vids = wkChannelVideos({ contents: (d && d.videos) || [], author: d && d.author, authorId: d && d.authorId });
+    return { title: (d && d.title) || "再生リスト", playlistId: pid, videos: vids };
+  } catch (_) { return null; }
+}
+/* 急上昇: /api/v1/trending */
+async function wkTrending(signal) {
+  try {
+    const d = await wkGet("/api/v1/trending", signal);
+    return wkChannelVideos({ contents: Array.isArray(d) ? d : ((d && (d.videos || d.contents)) || []) });
+  } catch (_) { return []; }
+}
+/* 動画メタ情報: /api/v1/videos/{videoID} */
+async function wkVideo(id, signal) {
+  const d = await wkGet("/api/v1/videos/" + encodeURIComponent(id), signal);
+  if (!d || !(d.videoId || d.title)) throw new Error("worker video empty");
+  d.videoId = d.videoId || id;
+  d.__src = "worker";
+  return d;
+}
+/* コメント: /api/v1/comments/{videoID} */
+async function wkComments(id, signal) {
+  const d = await wkGet("/api/v1/comments/" + encodeURIComponent(id), signal);
+  if (!d || !Array.isArray(d.comments)) throw new Error("worker comments empty");
+  return { commentCount: d.commentCount || d.comments.length, comments: d.comments, continuation: d.continuation };
+}
 /* 登録チャンネルの動画を Worker から取得 */
 async function wkChannelStreams(cid, signal) {
-  try { return wkChannelVideos(await wkChannel(cid, signal)); } catch (_) { return []; }
+  const a = await wkChannelTab(cid, "videos", "latest", signal);
+  if (a.length) return a;
+  return wkChannelTab(cid, "home", "latest", signal);
 }
+
 
 
 /* ---------------- Invidious 互換 API (invidiousapi-rjbqebgk.manus.space) ----------------
@@ -2382,9 +2469,14 @@ async function homeFeed(chip, signal) {
   const t2 = (q ? ytaSearch(q, signal) : ytaTrend(signal))
     .then((v) => { ytaResult = { status: "fulfilled", value: v }; })
     .catch((e) => { ytaResult = { status: "rejected", reason: e }; });
+  /* Worker API の急上昇 /api/v1/trending も併走（失敗しても他ソースで表示） */
+  let wkResult = null;
+  const t3 = (q ? Promise.resolve([]) : wkTrending(signal))
+    .then((v) => { wkResult = { status: "fulfilled", value: v }; })
+    .catch((e) => { wkResult = { status: "rejected", reason: e }; });
   await Promise.race([
-    Promise.all([t0, t1, t2]),
-    Promise.race([t0, t1, t2]).then(() => new Promise((r) => setTimeout(r, 1500))),
+    Promise.all([t0, t1, t2, t3]),
+    Promise.race([t0, t1, t2, t3]).then(() => new Promise((r) => setTimeout(r, 1500))),
     new Promise((r) => setTimeout(r, 12000)),
   ]);
   if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
@@ -2395,6 +2487,9 @@ async function homeFeed(chip, signal) {
     v.videoId = id; seen.add(id); merged.push(v);
   };
   /* トレンドを先頭に並べる（最速で届いたものから表示） */
+  if (wkResult && wkResult.status === "fulfilled") {
+    (wkResult.value || []).forEach(add);
+  }
   if (nivResult && nivResult.status === "fulfilled") {
     (nivResult.value || []).forEach(add);
   }
@@ -3226,6 +3321,11 @@ async function getComments(id, signal) {
     const s = await siaComments(id, signal);
     if (s && s.comments.length) return s;
   } catch (_) {}
+  /* Worker API: /api/v1/comments/{videoid} */
+  try {
+    const w = await wkComments(id, signal);
+    if (w && w.comments.length) return w;
+  } catch (_) {}
   try {
     const d = await api("comments", "/api/v1/comments/" + id + "?sort_by=top", { signal });
     if (d && (d.comments || []).length) return d;
@@ -3330,6 +3430,8 @@ async function fetchChannelShorts(cid, fallbackVideos, signal) {
     if (!id || seen.has(id)) return;
     seen.add(id); v.videoId = id; v.isShort = true; out.push(v);
   };
+  /* Worker API: /api/v1/channels/{cid}?tab=shorts&sort=latest を最優先 */
+  try { (await wkChannelShorts(cid, "latest", signal)).forEach(push); } catch (_) {}
   try {
     const d = await api("channel", "/api/v1/channels/" + cid + "/shorts", { signal });
     (d.videos || d || []).forEach(push);
@@ -3388,7 +3490,8 @@ async function fetchChannelData(cid, signal) {
     pipedGet("/channel/" + encodeURIComponent(cid), signal),
     siaChannel(cid, signal),
     ytaChannel(cid, signal),
-    wkChannel(cid, signal),
+    /* Worker API: tab=videos を主、失敗時は tab=home にフォールバック */
+    wkChannel(cid, signal, "videos", "latest").catch(() => wkChannel(cid, signal, "home", "latest")),
   ]);
   const W = wk.status === "fulfilled" ? wk.value : null;
   const I = inv.status === "fulfilled" ? inv.value : null;
@@ -3708,8 +3811,12 @@ async function pageChannel(cid) {
       const playlistGhost = channelTabGhost("playlists");
       body.appendChild(playlistGhost);
       try {
-        const d = await api("channel", "/api/v1/channels/" + cid + "/playlists");
-        let pls = d.playlists || d || [];
+        /* Worker API: /api/v1/channels/{cid}?tab=playlists&sort=latest を最優先 */
+        let pls = await wkChannelPlaylists(cid, sortMode, nav.abort && nav.abort.signal);
+        if (!pls.length) {
+          const d = await api("channel", "/api/v1/channels/" + cid + "/playlists");
+          pls = d.playlists || d || [];
+        }
         if (!pls.length && siaData) {
           pls = (siaData.playlists || []).filter((p) => p.playlistId).map((p) => ({
             title: p.title,
@@ -3727,12 +3834,17 @@ async function pageChannel(cid) {
             '<span class="dur">' + fmtNum(p.videoCount || (p.videos || []).length || 0) + "本</span></div>" +
             '<div class="meta"><div style="min-width:0"><div class="mtitle">' + esc(p.title || "再生リスト") + "</div>" +
             '<div class="msub">' + fmtNum(p.videoCount || (p.videos || []).length || 0) + "本の動画</div></div></div>";
-          c.onclick = () => {
-            if (p.videos && p.videos[0]) {
-              const listName = p.title || "チャンネル再生リスト";
-              S.playlists[listName] = p.videos;
-              go("/watch?v=" + vidOf(p.videos[0]) + "&list=" + encodeURIComponent(listName) + "&index=0");
+          c.onclick = async () => {
+            let vids = p.videos || [];
+            /* Worker API: /api/v1/playlists/{playlistID} で中身を取得 */
+            if (!vids.length && p.playlistId) {
+              const d = await wkPlaylist(p.playlistId, nav.abort && nav.abort.signal);
+              vids = (d && d.videos) || [];
             }
+            if (!vids.length) return toast("再生リストを取得できませんでした");
+            const listName = p.title || "チャンネル再生リスト";
+            S.playlists[listName] = vids;
+            go("/watch?v=" + vidOf(vids[0]) + "&list=" + encodeURIComponent(listName) + "&index=0");
           };
           g.appendChild(c);
         });
