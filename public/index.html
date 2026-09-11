@@ -2,6 +2,7 @@
 <!doctype html>
 <html lang="ja">
 <head>
+<meta name="referrer" content="no-referrer">
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>NKYS Tube Pro</title>
@@ -1502,7 +1503,8 @@ function jaParams(u) {
   }
   return u;
 }
-const px = (u) => (USE_PROXY ? "/api/public/px?u=" + encodeURIComponent(jaParams(u)) : jaParams(u));
+/* 自前 Worker は CORS 対応済みなのでプロキシを経由しない（直接叩いた方が速く確実） */
+const px = (u) => ((USE_PROXY && String(u).indexOf(WORKER_API) !== 0) ? "/api/public/px?u=" + encodeURIComponent(jaParams(u)) : jaParams(u));
 
 
 const hRec = (b) => (S.health[b] || (S.health[b] = { fail: 0, ms: 1200 }));
@@ -1737,6 +1739,59 @@ function abs(u) {
   if (u.startsWith("//")) return "https:" + u;
   if (u.startsWith("/")) return STREAM_PRIMARY + u;
   return u;
+}
+
+/* ---------- チャンネルアイコン取得（Worker API / キャッシュ付き） ---------- */
+const AVATARS = new Map();       /* channelId -> url（解決済み） */
+const AVATAR_JOBS = new Map();   /* channelId -> Promise */
+try {
+  const saved = JSON.parse(localStorage.getItem("nkys_avatars") || "{}");
+  Object.keys(saved).forEach((k) => { if (saved[k]) AVATARS.set(k, saved[k]); });
+} catch (_) {}
+let avatarSaveTimer;
+function saveAvatars() {
+  clearTimeout(avatarSaveTimer);
+  avatarSaveTimer = setTimeout(() => {
+    try {
+      const o = {};
+      let n = 0;
+      AVATARS.forEach((v, k) => { if (v && n < 400) { o[k] = v; n++; } });
+      localStorage.setItem("nkys_avatars", JSON.stringify(o));
+    } catch (_) {}
+  }, 1000);
+}
+const isChannelId = (id) => /^UC[\w-]{10,}$/.test(String(id || ""));
+function pickAvatar(list) {
+  const a = (list || []).map((t) => t && (t.url || t)).filter(Boolean);
+  return a.length ? abs(a[a.length - 1]) : "";
+}
+/* チャンネルアイコンを Worker API から取得（同一IDは1回だけ / 結果は永続キャッシュ） */
+function fetchChannelAvatar(cid) {
+  if (!isChannelId(cid)) return Promise.resolve("");
+  if (AVATARS.has(cid)) return Promise.resolve(AVATARS.get(cid));
+  if (AVATAR_JOBS.has(cid)) return AVATAR_JOBS.get(cid);
+  const job = (async () => {
+    let url = "";
+    try {
+      const d = await wkGet("/api/v1/channels/" + encodeURIComponent(cid), null, 9000);
+      url = pickAvatar(d && d.authorThumbnails) || abs((d && (d.authorThumbnail || d.avatar)) || "");
+    } catch (_) { url = ""; }
+    if (url) { AVATARS.set(cid, url); saveAvatars(); }
+    AVATAR_JOBS.delete(cid);
+    return url;
+  })();
+  AVATAR_JOBS.set(cid, job);
+  return job;
+}
+/* <img> に正しいチャンネルアイコンを流し込む（未取得なら Worker から遅延取得） */
+function applyAuthorIcon(img, v) {
+  if (!img || !v) return;
+  const direct = authorImg(v);
+  if (direct) { img.src = direct; return; }
+  const cid = v.authorId || v.channelId || "";
+  const cached = AVATARS.get(cid);
+  if (cached) { img.src = cached; return; }
+  fetchChannelAvatar(cid).then((u) => { if (u && img.isConnected !== false) img.src = u; });
 }
 
 /* ---------------- Piped ---------------- */
@@ -2066,7 +2121,7 @@ function wkChannelVideos(d) {
   return (Array.isArray(arr) ? arr : []).map((it) => {
     const id = it && (it.videoId || it.id);
     if (!id || !/^[\w-]{11}$/.test(id)) return null;
-    if (it.type && it.type !== "video" && it.type !== "shortVideo" && it.type !== "livestream") return null;
+    if (it.type && /^(playlist|channel|mix)$/i.test(String(it.type))) return null;
     const th = ((it.videoThumbnails || []).map((t) => t && t.url).filter(Boolean)[0]) || it.thumbnail || "";
     return {
       videoId: id,
@@ -2078,7 +2133,7 @@ function wkChannelVideos(d) {
       viewCount: it.viewCount || it.views || 0,
       published: it.published || 0,
       publishedText: it.publishedText || it.uploadedDate || "",
-      isShort: !!it.isShort,
+      isShort: !!it.isShort || /short/i.test(String(it.type || "")),
       __thumb: th,
     };
   }).filter(Boolean);
@@ -2392,8 +2447,9 @@ function videoCard(v, mode, idx) {
   /* 先頭から8件はファーストビューに入るため eager + fetchpriority=high で即表示 */
   const eager = idx != null && idx < 8;
   const ld = eager ? 'loading="eager" fetchpriority="high"' : 'loading="lazy"';
-  const av = mode === "list" ? '<img class="channel-icon" ' + ld + ' decoding="async" width="28" height="28" src="' + esc(authorImg(v) || "https://i.ytimg.com/vi/" + id + "/default.jpg") + '" alt="">'
-    : mode ? "" : '<img ' + ld + ' decoding="async" width="36" height="36" src="' + esc(authorImg(v) || "https://i.ytimg.com/vi/" + id + "/default.jpg") + '" alt="">';
+  const avSrc = authorImg(v) || AVATARS.get(v.authorId || "") || "https://i.ytimg.com/vi/" + id + "/default.jpg";
+  const av = mode === "list" ? '<img class="channel-icon author-av" referrerpolicy="no-referrer" ' + ld + ' decoding="async" width="28" height="28" src="' + esc(avSrc) + '" alt="">'
+    : mode ? "" : '<img class="author-av" referrerpolicy="no-referrer" ' + ld + ' decoding="async" width="36" height="36" src="' + esc(avSrc) + '" alt="">';
   const channel = mode === "list"
     ? '<div class="channel-line">' + av + '<span>' + esc(v.author || "") + '</span></div>'
     : '<div class="msub">' + esc(v.author || "") + "</div>";
@@ -2411,6 +2467,7 @@ function videoCard(v, mode, idx) {
     '<button class="card-more" type="button" aria-label="その他" title="その他"><svg viewBox="0 0 24 24"><path d="M12 8a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4z"/></svg></button></div>';
   const moreBtn = card.querySelector(".card-more");
   moreBtn.onclick = (e) => { e.stopPropagation(); openCardMenu(moreBtn, v); };
+  applyAuthorIcon(card.querySelector("img.author-av"), v);
   card.onclick = () => go("/watch?v=" + id);
   card.addEventListener("pointerenter", () => prefetchVideo(id), { once: true });
   card.addEventListener("touchstart", () => prefetchVideo(id), { once: true, passive: true });
@@ -3037,7 +3094,7 @@ async function pageWatch(id, startAt) {
 
   $("#vtitle").outerHTML = `<h1 id="vtitle">${esc(v.title)}${isLive(v) ? '<span class="livechip">ライブ</span>' : ""}</h1>`;
   $(".owner").innerHTML = `
-    <img src="${esc(authorImg(v))}" alt="">
+    <img class="author-av" referrerpolicy="no-referrer" src="${esc(authorImg(v) || AVATARS.get(v.authorId || "") || "")}" alt="">
     <div>
       <div class="oname" id="goCh">${collabNameHtml(v.authorId, v.author)}</div>
       <div class="osub">${v.subCount ? fmtNum(v.subCount) + "人の登録者" : (v.subCountText ? esc(v.subCountText) : "")}</div>
@@ -3065,6 +3122,7 @@ async function pageWatch(id, startAt) {
         </div>
       </div>
     </div>`;
+  applyAuthorIcon($(".owner img.author-av"), v);
   $("#desc").outerHTML = `<div id="desc"><b>${fmtNum(v.viewCount)}回視聴・${esc(v.publishedText || ago(v.published))}</b><div class="desc-body">${esc(v.description || "")}</div><button type="button" class="desc-more" aria-expanded="false">もっと見る</button></div>`;
   $("#commentHead").innerHTML = `<span>${fmtNum(v.commentCount || 0)} 件のコメント</span>`;
 
@@ -3489,35 +3547,56 @@ async function fetchChannelData(cid, signal) {
   const ch = {
     author: (Y && Y.name) || (X && X.title) || (I && I.author) || (P && P.name) || (W && (W.author || W.title)) || "",
     authorId: cid,
-    authorHandle: (I && I.authorHandle) || "",
+    authorHandle: (I && I.authorHandle) || (W && (W.authorHandle || W.handle)) || "",
     subCount: (Y && Y.subCount) || (I && I.subCount) || (W && W.subCount) || (P && P.subscriberCount) || (X ? siaNum(X.videoCount) : 0),
     description: (Y && Y.description) || (X && X.description) || (I && I.description) || (P && P.description) || (W && W.description) || "",
     authorVerified: !!((Y && Y.verified) || (I && I.authorVerified) || (P && P.verified)),
-    authorThumbnails: (Y && Y.avatar ? [{ url: Y.avatar }]
-      : (X && X.avatar ? [{ url: X.avatar }]
-        : (I && I.authorThumbnails && I.authorThumbnails.length ? I.authorThumbnails
-          : (P && P.avatarUrl ? [{ url: P.avatarUrl }]
-            : ((W && W.authorThumbnails && W.authorThumbnails.length) ? W.authorThumbnails : []))))),
-    authorBanners: (Y && Y.banner ? [{ url: Y.banner }]
-      : (X && X.banner ? [{ url: X.banner }]
-        : (I && I.authorBanners && I.authorBanners.length ? I.authorBanners
-          : (P && P.bannerUrl ? [{ url: P.bannerUrl }] : [])))),
+    authorThumbnails: (function () {
+      const c = [W && W.authorThumbnails, I && I.authorThumbnails,
+        Y && Y.avatar && [{ url: Y.avatar }], X && X.avatar && [{ url: X.avatar }],
+        P && P.avatarUrl && [{ url: P.avatarUrl }]];
+      const hit = c.find((a) => Array.isArray(a) && a.length);
+      return hit || [];
+    })(),
+    authorBanners: (function () {
+      const c = [W && W.authorBanners, I && I.authorBanners,
+        Y && Y.banner && [{ url: Y.banner }], X && X.banner && [{ url: X.banner }],
+        P && P.bannerUrl && [{ url: P.bannerUrl }]];
+      const hit = c.find((a) => Array.isArray(a) && a.length);
+      return hit || [];
+    })(),
   };
 
   let videos = [];
   const seen = new Set();
-  const push = (v) => { const id = vidOf(v); if (!id || seen.has(id)) return; seen.add(id); v.videoId = id; videos.push(v); };
-  if (Y && Y.videos.length) Y.videos.forEach(push);
-  if (X) siaChannelVideos(X).forEach(push);
-  if (invVids.status === "fulfilled") {
+  const push = (v) => {
+    if (!v || typeof v !== "object") return;
+    const id = vidOf(v); if (!id || seen.has(id)) return;
+    seen.add(id); v.videoId = id; videos.push(v);
+  };
+  /* どのソースが壊れた形で返っても一覧描画を止めない */
+  const pushAll = (fn) => { try { const a = fn(); if (Array.isArray(a)) a.forEach(push); } catch (_) {} };
+  /* Worker を最優先で統合（自前APIなので最も安定） */
+  pushAll(() => (W ? wkChannelVideos(W) : []));
+  pushAll(() => (Y && Array.isArray(Y.videos) ? Y.videos : []));
+  pushAll(() => (X ? siaChannelVideos(X) : []));
+  pushAll(() => {
+    if (invVids.status !== "fulfilled") return [];
     const d = invVids.value;
-    (d.videos || d || []).forEach(push);
-  }
-  if (I && I.latestVideos) I.latestVideos.forEach(push);
-  if (P && Array.isArray(P.relatedStreams)) P.relatedStreams.map(normPipedVideo).forEach(push);
-  /* Worker のチャンネル動画も統合（他ソースが落ちても一覧が空にならない） */
-  if (W) wkChannelVideos(W).forEach(push);
+    if (Array.isArray(d)) return d;
+    if (d && Array.isArray(d.videos)) return d.videos;
+    if (d && Array.isArray(d.contents)) return wkChannelVideos(d);
+    if (d && Array.isArray(d.latestVideos)) return d.latestVideos;
+    return [];
+  });
+  pushAll(() => (I && Array.isArray(I.latestVideos) ? I.latestVideos : []));
+  pushAll(() => (P && Array.isArray(P.relatedStreams) ? P.relatedStreams.map(normPipedVideo) : []));
 
+  if (!ch.author && !videos.length) throw new Error("channel not found");
+  if (ch.authorId && (ch.authorThumbnails || []).length) {
+    const u = pickAvatar(ch.authorThumbnails);
+    if (u) { AVATARS.set(ch.authorId, u); saveAvatars(); }
+  }
   return { ch, videos, sia: X };
 }
 
@@ -3587,7 +3666,13 @@ async function pageChannel(cid) {
   } catch (e) { if (!isAbort(e)) view().innerHTML = '<div class="empty">チャンネルを取得できませんでした</div>'; return; }
 
   const subbed = S.subs.some((s) => s.id === cid);
-  const avatar = abs((ch.authorThumbnails || []).slice(-1)[0]?.url);
+  if (!pickAvatar(ch.authorThumbnails) && !AVATARS.get(cid)) {
+    fetchChannelAvatar(cid).then((u) => {
+      const img = document.querySelector(".chAvatar.author-av");
+      if (u && img) img.src = u;
+    });
+  }
+  const avatar = pickAvatar(ch.authorThumbnails) || AVATARS.get(cid) || "";
   const banner = ch.authorBanners?.length ? abs(ch.authorBanners[0].url) : "";
   let allVideos = allVideosSrc || [];
   const channelVideosBySort = new Map([["new", allVideos]]);
@@ -3606,7 +3691,7 @@ async function pageChannel(cid) {
   head.innerHTML =
     (banner ? '<img class="chBanner" src="' + esc(banner) + '" alt="">' : '<div class="chBanner"></div>') +
     '<div class="chHead">' +
-      '<div class="chAvatarWrap"><img class="chAvatar" src="' + esc(avatar) + '" alt="' + esc(ch.author) + '"></div>' +
+      '<div class="chAvatarWrap"><img class="chAvatar author-av" referrerpolicy="no-referrer" src="' + esc(avatar) + '" alt="' + esc(ch.author) + '"></div>' +
       '<div class="chInfo">' +
         '<div class="chName">' + esc(ch.author) + verifiedIcon + collabPlusHtml(cid) + '</div>' +
         '<div class="chMetaRow">' +
