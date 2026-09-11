@@ -856,14 +856,15 @@ body.theater .watch{padding-bottom:80px}
 </style>
 
 <style id="dark-ghost-screen-style">
-/* ゴーストスクリーンを暗めにして、読み込み中でも形状を見やすくする */
-.skel{background:linear-gradient(90deg,#202020 0%,#353535 45%,#202020 100%);background-size:200% 100%;}
+/* ゴーストスクリーンはテーマ変数を使い、ライトモードでも黒くならない */
+:root:not([data-theme="light"]) .skel{background:linear-gradient(90deg,var(--bg-elev) 0%,var(--bg-hover) 45%,var(--bg-elev) 100%);background-size:200% 100%}
+:root[data-theme="light"] .skel{background:linear-gradient(90deg,var(--bg-elev) 0%,var(--bg-hover) 45%,var(--bg-elev) 100%);background-size:200% 100%}
 .channel-loading{padding-bottom:24px}
 .channel-loading .chBanner{margin-top:16px;aspect-ratio:6.2/1;border-radius:var(--radius)}
 .channel-loading .chHead{display:flex;align-items:center;gap:24px;margin-top:16px;padding:0 8px}
 .channel-loading .chAvatar{width:96px;height:96px;border-radius:50%;flex:none}
 .channel-loading .chInfo{flex:1;min-width:0}
-.channel-loading .chTabs{display:flex;align-items:center;gap:24px;margin:20px 0 16px;padding:14px 2px;border-bottom:1px solid #3c3c3c}
+.channel-loading .chTabs{display:flex;align-items:center;gap:24px;margin:20px 0 16px;padding:14px 2px;border-bottom:1px solid var(--line)}
 .channel-loading .chTabs .skel{border-radius:4px}
 .channel-loading .ghost-channel-grid{margin-top:12px}
 .channel-loading .ghost-video-card{min-width:0}
@@ -1314,8 +1315,10 @@ const POOLS = {
 };
 const FALLBACK_ALL = [...new Set(Object.values(POOLS).flat())];
 
-/* siatube API（検索 / ショート / チャンネル取得の第3ソース） */
+/* siatube API（検索 / ショート） */
 const SIA = "https://siatube.com";
+/* チャンネルとライブ配信は Siatube API の専用エンドポイントから取得 */
+const SIA_CHANNEL_API = "https://SiatubeAPI.com";
 
 /* ytapi (ytapi-btpnydgm.manus.space): 検索 / 急上昇 / 動画メタ情報の追加ソース */
 const YTA = "https://ytapi-btpnydgm.manus.space";
@@ -1904,7 +1907,9 @@ async function siaSearch(q, signal) {
   const d = await siaGet("/api/search?q=" + encodeURIComponent(q), signal);
   return Array.isArray(d) ? d : (d.items || d.results || []);
 }
-async function siaChannel(cid, signal) { return siaGet("/api/channel/" + encodeURIComponent(cid), signal); }
+async function siaChannel(cid, signal) {
+  return fetchJson(SIA_CHANNEL_API, "/api/channel/" + encodeURIComponent(cid), signal, 9000);
+}
 
 /* 視聴ページ用: siatube の /api/video/{videoid} を Invidious 形式へ正規化
    （タイトル / 概要欄 / 関連動画 をこのAPIから取得する） */
@@ -3457,7 +3462,18 @@ async function fetchChannelLive(cid, signal) {
   };
   const addApi = (d) => (d && (d.videos || d.streams || d.items || d) || []).forEach((v) => push(v, true));
   await Promise.allSettled([
-    /* Invidiousのインスタンスによって streams / live のいずれかを提供 */
+    /* Siatube API のチャンネルレスポンスをライブ取得の主ソースにする */
+    siaChannel(cid, signal).then((d) => {
+      const candidates = [];
+      [d.live, d.lives, d.liveStreams, d.livestreams, d.streams].forEach((list) => {
+        if (Array.isArray(list)) candidates.push(...list);
+      });
+      siaChannelItems(d).forEach((item) => {
+        if (item && (item.isLive || /live|livestream|配信中/i.test(String(item.type || item.contentType || item.badge || "")))) candidates.push(item);
+      });
+      candidates.map(normSiaVideo).forEach((v) => push(v, true));
+    }).catch(() => {}),
+    /* 取得結果が欠ける場合に既存ソースで補完 */
     api("channel", "/api/v1/channels/" + encodeURIComponent(cid) + "/streams", { signal }).then(addApi).catch(() => {}),
     api("channel", "/api/v1/channels/" + encodeURIComponent(cid) + "/live", { signal }).then(addApi).catch(() => {}),
     /* Pipedはlivestreamsタブのstreamをライブとして扱う */
