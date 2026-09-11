@@ -21,7 +21,7 @@ const ALLOW = [
   /(^|\.)workers\.dev$/i, /(^|\.)f5\.si$/i, /(^|\.)perennialte\.ch$/i, /(^|\.)duti\.dev$/i,
   /(^|\.)private\.coffee$/i, /(^|\.)ducks\.party$/i, /(^|\.)nosebs\.ru$/i,
   /(^|\.)adminforge\.de$/i, /(^|\.)kavin\.rocks$/i,
-  /(^|\.)siatube\.com$/i, /(^|\.)manus\.space$/i,
+  /(^|\.)siatube\.com$/i, /(^|\.)siatubeapi\.com$/i, /(^|\.)manus\.space$/i,
   /(^|\.)youtube\.com$/i, /(^|\.)ggpht\.com$/i,
   /(^|\.)googleusercontent\.com$/i, /(^|\.)youtube-nocookie\.com$/i, /(^|\.)gstatic\.com$/i,
 ];
