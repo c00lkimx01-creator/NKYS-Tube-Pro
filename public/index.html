@@ -2647,18 +2647,55 @@ async function pageHome() {
   root.appendChild(normalSec);
 
   const signal = nav.abort.signal;
-  /* Short棚: Worker API のショート(登録不要) + 登録チャンネルのショート */
+  /* Short棚: 登録チャンネル + 検索履歴のショート（無ければトレンド） */
   const shortsPromise = homeShortsFeed(signal).catch(() => []);
   const trendPromise = homeFeed(homeChip, signal);
+
+  /* Short棚: 右端まで横スクロールしたら追加読み込み */
+  const shSeen = new Set();
+  let shPool = [], shLoading = false, shPage = 1, shExhausted = false;
+  const appendShorts = (list, max) => {
+    let added = 0;
+    (list || []).forEach((v) => {
+      if (max && added >= max) return;
+      const id = vidOf(v);
+      if (!id || shSeen.has(id)) return;
+      shSeen.add(id); v.videoId = id; v.isShort = true;
+      shortShelf.appendChild(shortCard(v));
+      added++;
+    });
+    return added;
+  };
+  const loadMoreShorts = async () => {
+    if (shLoading || shExhausted || !shortShelf.isConnected || signal.aborted) return;
+    if (shortShelf.getAttribute("aria-busy")) return;
+    shLoading = true;
+    try {
+      if (appendShorts(shPool.splice(0, 8), 8) === 0) {
+        shPage++;
+        const more = await homeShortsMore(signal, shPage);
+        if (signal.aborted) return;
+        const added = appendShorts(more, 8);
+        if (!added && shPage > 3) shExhausted = true;
+      }
+    } catch (_) {}
+    shLoading = false;
+  };
+  shortShelf.addEventListener("scroll", () => {
+    if (shortShelf.scrollLeft + shortShelf.clientWidth > shortShelf.scrollWidth - 400) loadMoreShorts();
+  }, { passive: true });
 
   shortsPromise.then((items) => {
     if (signal.aborted) return;
         shortShelf.innerHTML = "";
     shortShelf.removeAttribute("aria-busy");
-    (items || []).slice(0, 12).forEach((v) => shortShelf.appendChild(shortCard(v)));
+    const all = items || [];
+    appendShorts(all.slice(0, 12));
+    shPool = all.slice(12);
 
     if (!shortShelf.children.length) {
       shortShelf.appendChild(el("div", "empty", "ショートを取得できませんでした"));
+      shExhausted = true;
     }
   }).catch(() => shortSec.remove());
 
@@ -4052,8 +4089,38 @@ async function fetchSubsShorts(signal, perCh) {
   return out;
 }
 
-/* ホームのショート棚: 登録していなくても表示できるようにする。
-   Worker API(/api/v1/shorts) を主に使い、登録があればそのショートを先頭に混ぜる */
+/* ホームのショート棚: 登録チャンネル + 検索履歴のショートを主に表示し、
+   登録が空 / 取得できない場合はトレンドのショートで埋める */
+function isShortish(v) {
+  return !!(v && (v.isShort || (v.lengthSeconds > 0 && v.lengthSeconds <= 180)));
+}
+/* 検索履歴クエリからショートを集める */
+async function fetchHistoryShorts(signal, page) {
+  const qs = historyQueries(4).map((q) => q + " shorts");
+  if (!qs.length) return [];
+  const p = page && page > 1 ? "&page=" + page : "";
+  const res = await Promise.allSettled(qs.map((q) =>
+    api("search", "/api/v1/search?q=" + encodeURIComponent(q) + "&type=video&region=" + RG() + p, { signal })));
+  const out = [];
+  res.forEach((r) => {
+    if (r.status !== "fulfilled") return;
+    (Array.isArray(r.value) ? r.value : (r.value && r.value.items) || []).forEach((v) => {
+      if (isShortish(v)) out.push(v);
+    });
+  });
+  return out;
+}
+/* トレンドのショート */
+async function fetchTrendingShorts(signal) {
+  const res = await Promise.allSettled([
+    wkRelatedShorts("", signal, true),
+    wkTrending(signal),
+  ]);
+  const out = [];
+  if (res[0].status === "fulfilled") (res[0].value || []).forEach((v) => out.push(v));
+  if (res[1].status === "fulfilled") (res[1].value || []).filter(isShortish).forEach((v) => out.push(v));
+  return out;
+}
 async function homeShortsFeed(signal) {
   const out = [], seen = new Set();
   const push = (v) => {
@@ -4061,17 +4128,30 @@ async function homeShortsFeed(signal) {
     if (!id || seen.has(id)) return;
     v.videoId = id; v.isShort = true; seen.add(id); out.push(v);
   };
+  const hasSubs = (S.subs || []).length > 0;
   const res = await Promise.allSettled([
-    wkRelatedShorts("", signal, true),
-    (S.subs || []).length ? fetchSubsShorts(signal, 4) : Promise.resolve([]),
+    hasSubs ? fetchSubsShorts(signal, 4) : Promise.resolve([]),
+    fetchHistoryShorts(signal, 1),
   ]);
-  const wk = res[0].status === "fulfilled" ? res[0].value || [] : [];
-  const subs = res[1].status === "fulfilled" ? res[1].value || [] : [];
-  subs.forEach(push);
-  wk.forEach(push);
+  if (res[0].status === "fulfilled") (res[0].value || []).forEach(push);
+  if (res[1].status === "fulfilled") (res[1].value || []).forEach(push);
+  /* 登録チャンネルが空 / 履歴でも埋まらない場合はトレンドで補完 */
+  if (!hasSubs || out.length < 8) {
+    try { (await fetchTrendingShorts(signal) || []).forEach(push); } catch (_) {}
+  }
   if (!out.length) {
     try { (await fetchShortsQuick(personalShortQueries().slice(0, 3), signal) || []).forEach(push); } catch (_) {}
   }
+  return out;
+}
+/* ホームのショート棚の追加読み込み（横スクロール時） */
+async function homeShortsMore(signal, page) {
+  const res = await Promise.allSettled([
+    fetchHistoryShorts(signal, page + 1),
+    fetchTrendingShorts(signal),
+  ]);
+  const out = [];
+  res.forEach((r) => { if (r.status === "fulfilled") (r.value || []).forEach((v) => out.push(v)); });
   return out;
 }
 
