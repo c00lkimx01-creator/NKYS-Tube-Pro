@@ -23,6 +23,7 @@ const ALLOW = [
   /(^|\.)adminforge\.de$/i, /(^|\.)kavin\.rocks$/i,
   /(^|\.)siatube\.com$/i, /(^|\.)manus\.space$/i,
   /(^|\.)youtube\.com$/i, /(^|\.)ggpht\.com$/i,
+  /(^|\.)googleusercontent\.com$/i, /(^|\.)youtube-nocookie\.com$/i, /(^|\.)gstatic\.com$/i,
 ];
 const allowed = (h) => ALLOW.some((r) => r.test(h));
 
