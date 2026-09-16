@@ -3070,7 +3070,7 @@ async function pageWatch(id, startAt) {
   const siaPromise = siaWatch(id, nav.abort.signal).catch(() => null);
 
   const guessThumb = "https://i.ytimg.com/vi/" + encodeURIComponent(id) + "/hqdefault.jpg";
-  const mode0 = S.settings.playerMode === "nocookie" ? "nocookie" : "stream";
+  const mode0 = (S.settings.playerMode === "nocookie" || S.settings.playerMode === "edu") ? S.settings.playerMode : "stream";
 
   const wrap = el("div", "watch");
   wrap.innerHTML = `
@@ -3161,6 +3161,7 @@ async function pageWatch(id, startAt) {
           <div class="pm-label">再生方法</div>
           <button type="button" role="menuitem" data-player-action="mode-stream">ストリーム（高画質選択可）</button>
           <button type="button" role="menuitem" data-player-action="mode-nocookie">Nocookie（YouTube 埋め込み）</button>
+          <button type="button" role="menuitem" data-player-action="mode-edu">EDU 再生（youtubeeducation）</button>
         </div>
       </div>
     </div>`;
@@ -3256,6 +3257,7 @@ async function pageWatch(id, startAt) {
       if (item.dataset.playerAction === "pip") openPip();
       if (item.dataset.playerAction === "mode-stream") window.__nkysSetMode && window.__nkysSetMode("stream");
       if (item.dataset.playerAction === "mode-nocookie") window.__nkysSetMode && window.__nkysSetMode("nocookie");
+      if (item.dataset.playerAction === "mode-edu") window.__nkysSetMode && window.__nkysSetMode("edu");
       closePlayerMore();
     };
     document.addEventListener("click", (e) => {
@@ -3270,6 +3272,39 @@ async function pageWatch(id, startAt) {
   loadComments(id);
 }
 
+/* EDU 再生: 外部の video_config.json から埋め込みパラメータを取得する */
+const EDU_CONFIG_URL = "https://raw.githubusercontent.com/siawaseok3/wakame/master/video_config.json";
+const EDU_FALLBACK_PARAMS = "?autoplay=1&mute=0&controls=1&start=0&playsinline=1&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&fs=1&cc_load_policy=0&enablejsapi=1&widgetid=1";
+let __eduParamsPromise = null;
+function eduParams() {
+  if (!__eduParamsPromise) {
+    __eduParamsPromise = (async () => {
+      try {
+        const r = await fetch(EDU_CONFIG_URL, { cache: "no-store" });
+        if (!r.ok) throw new Error("edu config");
+        const j = await r.json();
+        const raw = String(j.params || "");
+        if (!raw) throw new Error("empty");
+        /* JSON 内は &amp; でエスケープされている場合があるため戻す */
+        return raw.replace(/&amp;/g, "&");
+      } catch (_) {
+        return EDU_FALLBACK_PARAMS;
+      }
+    })();
+  }
+  return __eduParamsPromise;
+}
+/* パラメータ文字列に開始位置と autoplay を反映して EDU 埋め込み URL を作る */
+function eduEmbedUrl(id, params, start) {
+  let qs = String(params || "");
+  if (qs.charAt(0) === "?") qs = qs.slice(1);
+  const sp = new URLSearchParams(qs);
+  sp.set("autoplay", S.settings.autoplay ? "1" : "0");
+  sp.set("start", String(Math.max(0, Math.round(start || 0))));
+  sp.set("enablejsapi", "1");
+  return "https://youtubeeducation.com/embed/" + encodeURIComponent(id) + "?" + sp.toString();
+}
+
 /* プレーヤーの描画: mode = "stream"(独自プレーヤー) | "nocookie"(YouTube nocookie 埋め込み)
    opt.poster だけの初期呼び出し（データ未取得時）にも対応 */
 function mountPlayer(mode, opt) {
@@ -3277,6 +3312,22 @@ function mountPlayer(mode, opt) {
   const box = $("#playerWrap");
   box.dataset.mode = mode;
   box.innerHTML = "";
+  if (mode === "edu" && opt.id) {
+    document.onkeydown = null;
+    const f = el("iframe");
+    f.id = "ytFrame"; f.allowFullscreen = true;
+    f.allow = "autoplay; encrypted-media; picture-in-picture";
+    f.referrerPolicy = "strict-origin-when-cross-origin";
+    f.dataset.vid = opt.id;
+    box.appendChild(f);
+    const vid = opt.id, st = opt.start;
+    eduParams().then((pp) => {
+      if (!f.isConnected || box.dataset.mode !== "edu") return;
+      f.src = eduEmbedUrl(vid, pp, st);
+      window.__nkTrackNocookie && window.__nkTrackNocookie(f, vid, opt.v);
+    });
+    return;
+  }
   if (mode === "nocookie" && opt.id) {
     document.onkeydown = null;
     const f = el("iframe");
@@ -3337,12 +3388,17 @@ function wireModeToggle(id, v) {
     const m = $("#playerWrap").dataset.mode;
     const sI = document.querySelector('[data-player-action="mode-stream"]');
     const nI = document.querySelector('[data-player-action="mode-nocookie"]');
-    if (sI) sI.classList.toggle("on", m !== "nocookie");
+    const eI = document.querySelector('[data-player-action="mode-edu"]');
+    if (sI) sI.classList.toggle("on", m !== "nocookie" && m !== "edu");
     if (nI) nI.classList.toggle("on", m === "nocookie");
-    if (qsel) qsel.style.display = m === "nocookie" ? "none" : "";
+    if (eI) eI.classList.toggle("on", m === "edu");
+    if (qsel) qsel.style.display = (m === "nocookie" || m === "edu") ? "none" : "";
   };
   window.__nkysSetMode = (mode) => {
-    if (mode === "nocookie") {
+    if (mode === "edu") {
+      S.settings.playerMode = "edu"; saveSettings();
+      mountPlayer("edu", { id, v, start: curPlayTime() });
+    } else if (mode === "nocookie") {
       S.settings.playerMode = "nocookie"; saveSettings();
       mountPlayer("nocookie", { id, v, start: curPlayTime() });
     } else {
@@ -4296,7 +4352,7 @@ const ICO = {
 
 /* YouTube 埋め込みからの再生位置イベントを受け取り、該当ショートの赤線を更新 */
 window.addEventListener("message", (e) => {
-  if (!/youtube(-nocookie)?\.com$/.test((e.origin || "").replace(/^https?:\/\/(www\.)?/, ""))) return;
+  if (!/(youtube(-nocookie)?|youtubeeducation)\.com$/.test((e.origin || "").replace(/^https?:\/\/(www\.)?/, ""))) return;
   let d; try { d = typeof e.data === "string" ? JSON.parse(e.data) : e.data; } catch (_) { return; }
   if (!d || (d.event !== "infoDelivery" && d.event !== "onStateChange") || !d.info) return;
   document.querySelectorAll(".short").forEach((n) => {
@@ -5594,7 +5650,7 @@ render();
   };
 
   window.addEventListener("message", (e) => {
-    if (!/youtube(-nocookie)?\.com$/.test((e.origin || "").replace(/^https?:\/\/(www\.)?/, ""))) return;
+    if (!/(youtube(-nocookie)?|youtubeeducation)\.com$/.test((e.origin || "").replace(/^https?:\/\/(www\.)?/, ""))) return;
     let d; try { d = typeof e.data === "string" ? JSON.parse(e.data) : e.data; } catch (_) { return; }
     if (!d || !d.info) return;
     if (track.frame && track.frame.contentWindow === e.source && typeof d.info.currentTime === "number") {
