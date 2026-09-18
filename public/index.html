@@ -2355,9 +2355,9 @@ addEventListener("popstate", render);
 if (APP_FILE_MODE) addEventListener("hashchange", render);
 document.addEventListener("click", (e) => {
   const ex = e.target.closest("[data-explore]");
-  if (ex) { e.preventDefault(); go("/results?q=" + encodeURIComponent(ex.dataset.explore)); return; }
+  if (ex) { e.preventDefault(); go("/results?search_query=" + encodeURIComponent(ex.dataset.explore)); return; }
   const n = e.target.closest("[data-nav]");
-  if (n) { e.preventDefault(); const t = n.dataset.nav; go(t === "home" ? "/" : "/" + t); }
+  if (n) { e.preventDefault(); const t = n.dataset.nav; go(t === "home" ? "/" : t === "subs" ? "/feed/channels" : "/" + t); }
 });
 
 const view = () => $("#view");
@@ -2581,7 +2581,7 @@ async function pageHome() {
   const root = view();
     root.innerHTML = "";
   const shortSec = el("section", "home-section home-ghost");
-  shortSec.innerHTML = '<div class="home-section-head"><h2>Short</h2></div>';
+  shortSec.innerHTML = '<div class="home-section-head"><h2><svg viewBox="0 0 24 24" style="width:24px;height:24px;vertical-align:-5px;margin-right:6px"><path fill="var(--brand)" d="M17.77 10.32l-1.2-.5L18 9.06a4.13 4.13 0 001.56-5.6 4.1 4.1 0 00-5.55-1.62L5.1 6.5A4.13 4.13 0 003.5 12a4.1 4.1 0 002.28 1.96l.94.4-1.44.75a4.13 4.13 0 00-1.56 5.6 4.1 4.1 0 005.55 1.62l8.91-4.66a4.13 4.13 0 001.6-5.5 4.1 4.1 0 00-2.01-1.85z"/><path fill="#fff" d="M10 8.4l6.06 3.6L10 15.6V8.4z"/></svg>ショート</h2></div>';
   const shortShelf = el("div", "shelf-scroll");
   shortShelf.setAttribute("aria-busy", "true");
   shortShelf.appendChild(ghostHomeShorts(8));
@@ -3035,12 +3035,12 @@ async function pageSearch(q, page) {
       }
       fresh.forEach((v) => listBox.appendChild(videoCard(v, "list")));
       btnNext.textContent = "次のページ (" + (cur + 1) + ") を表示";
-      if (navigate) history.replaceState({}, "", "/results?q=" + encodeURIComponent(q) + "&page=" + cur);
+      if (navigate) history.replaceState({}, "", "/results?search_query=" + encodeURIComponent(q) + "&page=" + cur);
     } catch (e) { g.remove(); if (!isAbort(e)) toast("次のページを取得できませんでした"); }
     finally { busy = false; }
   }
   searchMore = loadNext;
-  btnNext.onclick = () => go("/results?q=" + encodeURIComponent(q) + "&page=" + (cur + 1));
+  btnNext.onclick = () => go("/results?search_query=" + encodeURIComponent(q) + "&page=" + (cur + 1));
   const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) loadNext(true); }, { rootMargin: "600px" });
   io.observe(sentinel);
   signal.addEventListener("abort", () => io.disconnect(), { once: true });
@@ -5034,7 +5034,7 @@ function pageMyPage() {
     '<div class="mp-sub">この端末に保存されたデータで表示しています</div></div>' +
     '<button class="pill" id="mpSettings">設定</button></div>' +
     '<div class="mp-stats">' +
-    stat(subs.length, "登録チャンネル", "/subs") +
+    stat(subs.length, "登録チャンネル", "/feed/channels") +
     stat(hist.length, "視聴履歴", "/history") +
     stat(liked.length, "高く評価した動画", "/liked") +
     stat(later.length, "後で見る", "/watchlater") +
@@ -5044,7 +5044,7 @@ function pageMyPage() {
     ['<button class="pill" data-go="/history">履歴を見る</button>',
      '<button class="pill" data-go="/watchlater">後で見る</button>',
      '<button class="pill" data-go="/playlists">再生リスト</button>',
-     '<button class="pill" data-go="/subs">登録チャンネル</button>'].join("") +
+     '<button class="pill" data-go="/feed/channels">登録チャンネル</button>'].join("") +
     "</div>";
   const sec = (title, path) => {
     const h = el("div", "mp-sec");
@@ -5367,11 +5367,12 @@ function renderPage() {
   const p = currentPath(), sp = new URLSearchParams(currentSearch());
   document.querySelectorAll(".snav").forEach((n) =>
     n.classList.toggle("active", (n.dataset.nav === "home" && p === "/") || "/" + n.dataset.nav === p ||
+      (n.dataset.nav === "subs" && p === "/feed/channels") ||
       (n.dataset.nav === "shorts" && p.startsWith("/short"))));
 
   if (p === "/" ) { document.title = "NKYS Tube Pro"; return pageHome(); }
   if (p === "/results" || p === "/search") {
-    const q = sp.get("q") || "";
+    const q = sp.get("search_query") || sp.get("q") || "";
     document.title = q + " - NKYS Tube Pro";
     if (typeof addSearchHistory === "function") addSearchHistory(q);
     return pageSearch(q, sp.get("page"));
@@ -5390,7 +5391,7 @@ function renderPage() {
   if (p === "/shorts" || p === "/short") return pageShorts(sp.get("v"));
   if (p === "/mypage") { document.title = "マイページ - NKYS Tube Pro"; return pageMyPage(); }
   if (p === "/settings") { document.title = "設定 - NKYS Tube Pro"; return pageSettings(); }
-  if (p === "/subs") return pageSubs();
+  if (p === "/feed/channels" || p === "/subs") return pageSubs();
   if (p === "/history") return localPage("履歴", S.history);
   if (p === "/liked") return localPage("高く評価した動画", S.liked);
   if (p === "/watchlater") return localPage("後で見る", S.later);
@@ -5470,7 +5471,7 @@ function renderSug() {
       e.preventDefault();
       if (isHist && e.target.closest(".sug-x")) { removeSearchHistory(q); renderSug(); return; }
       $("#q").value = q; addSearchHistory(q); hideSug();
-      go("/results?q=" + encodeURIComponent(q));
+      go("/results?search_query=" + encodeURIComponent(q));
     };
     box.appendChild(row);
   };
@@ -5504,7 +5505,7 @@ $("#searchForm").onsubmit = (e) => {
   const q = $("#q").value.trim();
   if (!q) return;
   addSearchHistory(q); hideSug();
-  go("/results?q=" + encodeURIComponent(q));
+  go("/results?search_query=" + encodeURIComponent(q));
 };
 /* 検索クリア（×）ボタン: 入力があるときだけ表示し、押すと消去 */
 (() => {
@@ -5557,6 +5558,8 @@ $("#searchForm").onsubmit = (e) => {
     try { recognition.start(); } catch (_) { setListening(false); }
   });
 })();
+/* 既定でミニレール表示（PC）: YouTube と同じ初期レイアウト */
+if (innerWidth > 840) { $("#sidebar").classList.add("mini"); $("#main").classList.add("mini"); }
 $("#btnMenu").onclick = () => {
   if (innerWidth <= 840) { $("#sidebar").classList.toggle("open"); return; }
   $("#sidebar").classList.toggle("mini"); $("#main").classList.toggle("mini");
@@ -5602,7 +5605,7 @@ render();
   const BOTTOM = [
     { nav: "home", path: "/", label: "ホーム", d: "m11.485 2.143-8 4.8-2 1.2a1 1 0 001.03 1.714L3 9.567V20a2 2 0 002 2h5v-8h4v8h5a2 2 0 002-2V9.567l.485.29a1 1 0 001.03-1.714l-2-1.2-8-4.8a1 1 0 00-1.03 0Z" },
     { nav: "shorts", path: "/shorts", label: "ショート", d: "M15 12l-5-3v6l5-3Zm-1.533-10.81-8 4.7a5 5 0 00-.255 8.46 5 5 0 005.32 8.462l8-4.7a5 5 0 00.258-8.462 5 5 0 001.641-6.464l-.12-.217a5 5 0 00-6.844-1.78Z" },
-    { nav: "subs", path: "/subs", label: "登録", d: "M18 1H6a2 2 0 00-2 2h16a2 2 0 00-2-2Zm3 4H3a2 2 0 00-2 2v13a2 2 0 002 2h18a2 2 0 002-2V7a2 2 0 00-2-2ZM3 20V7h18v13H3Zm13-6.5L10 10v7l6-3.5Z" },
+    { nav: "subs", path: "/feed/channels", label: "登録", d: "M18 1H6a2 2 0 00-2 2h16a2 2 0 00-2-2Zm3 4H3a2 2 0 00-2 2v13a2 2 0 002 2h18a2 2 0 002-2V7a2 2 0 00-2-2ZM3 20V7h18v13H3Zm13-6.5L10 10v7l6-3.5Z" },
     { nav: "mypage", path: "/mypage", label: "あなた", d: "M12 1C5.925 1 1 5.925 1 12s4.925 11 11 11 11-4.925 11-11S18.075 1 12 1Zm0 4a4 4 0 110 8 4 4 0 010-8Zm-.1 11.001L11.899 16a5 5 0 014.904 3.61A8.96 8.96 0 0112 21a8.96 8.96 0 01-4.804-1.391 5 5 0 014.704-3.608Z" },
   ];
   const bn = document.createElement("nav");
