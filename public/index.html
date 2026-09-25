@@ -1,4 +1,5 @@
 
+
 <!doctype html>
 <html lang="ja">
 <head>
@@ -200,6 +201,8 @@ dialog h3{margin:0 0 12px}
   .logo sup{display:none}
   .hleft .logo{font-size:17px}
 }
+.logo .ytlogo{width:93px;height:20px;display:block;color:var(--fg,currentColor)}
+.home-empty{display:flex;justify-content:center;padding:24px 16px}.he-card{max-width:640px;width:100%;text-align:center;padding:24px 28px;border-radius:12px;background:var(--bg-2,rgba(127,127,127,.12))}.he-card h2{font-size:20px;margin:0 0 8px}.he-card p{margin:0;color:var(--fg-dim);font-size:14px}
 </style>
 
 <style>
@@ -1168,10 +1171,21 @@ dialog,
 <header>
   <div class="hleft">
     <button class="icobtn" id="btnMenu" aria-label="メニュー"><svg viewBox="0 0 24 24"><path d="M21,6H3V5h18V6z M21,11H3v1h18V11z M21,17H3v1h18V17z"/></svg></button>
-    <div class="logo" data-nav="home">
-      <span class="mark"><svg viewBox="0 0 28.57 20" aria-hidden="true"><path d="M27.9727 3.12324C27.6435 1.89323 26.6768 0.926623 25.4468 0.597366C23.2197 0 14.2827 0 14.2827 0C14.2827 0 5.34367 0 3.11858 0.597366C1.88856 0.926623 0.921961 1.89323 0.592704 3.12324C0 5.34844 0 10 0 10C0 10 0 14.6516 0.592704 16.8768C0.921961 18.1068 1.88856 19.0734 3.11858 19.4026C5.34367 20 14.2827 20 14.2827 20C14.2827 20 23.2197 20 25.4468 19.4026C26.6768 19.0734 27.6435 18.1068 27.9727 16.8768C28.5654 14.6516 28.5654 10 28.5654 10C28.5654 10 28.5654 5.34844 27.9727 3.12324Z" fill="#FF0000"/><path d="M11.4253 14.2854L18.8477 10.0004L11.4253 5.71533V14.2854Z" fill="white"/></svg></span>
-      NKYS Tube <sup>Pro</sup>
-    </div>
+    <div class="logo" data-nav="home" aria-label="ホーム" title="ホーム"><svg xmlns="http://www.w3.org/2000/svg" class="ytlogo" width="93" height="20" viewBox="0 0 93 20" focusable="false" aria-hidden="true">
+  <g>
+    <path d="M14.4848 20C14.4848 20 23.5695 20 25.8229 19.4C27.0917 19.06 28.0459 18.08 28.3808 16.87C29 14.65 29 9.98 29 9.98C29 9.98 29 5.34 28.3808 3.14C28.0459 1.9 27.0917 0.94 25.8229 0.61C23.5695 0 14.4848 0 14.4848 0C14.4848 0 5.42037 0 3.17711 0.61C1.9286 0.94 0.954148 1.9 0.59888 3.14C0 5.34 0 9.98 0 9.98C0 9.98 0 14.65 0.59888 16.87C0.954148 18.08 1.9286 19.06 3.17711 19.4C5.42037 20 14.4848 20 14.4848 20Z" fill="#FF0033"></path>
+    <path d="M19 10L11.5 5.75V14.25L19 10Z" fill="white"></path>
+  </g>
+  <g fill="currentColor">
+    <path d="M37.1384 18.8999V13.4399L40.6084 2.09994H38.0184L36.6984 7.24994C36.3984 8.42994 36.1284 9.65994 35.9284 10.7999H35.7684C35.6584 9.79994 35.3384 8.48994 35.0184 7.22994L33.7384 2.09994H31.1484L34.5684 13.4399V18.8999H37.1384Z"></path>
+    <path d="M44.1003 6.29994C41.0703 6.29994 40.0303 8.04994 40.0303 11.8199V13.6099C40.0303 16.9899 40.6803 19.1099 44.0403 19.1099C47.3503 19.1099 48.0603 17.0899 48.0603 13.6099V11.8199C48.0603 8.44994 47.3803 6.29994 44.1003 6.29994ZM45.3903 14.7199C45.3903 16.3599 45.1003 17.3899 44.0503 17.3899C43.0203 17.3899 42.7303 16.3499 42.7303 14.7199V10.6799C42.7303 9.27994 42.9303 8.02994 44.0503 8.02994C45.2303 8.02994 45.3903 9.34994 45.3903 10.6799V14.7199Z"></path>
+    <path d="M52.2713 19.0899C53.7313 19.0899 54.6413 18.4799 55.3913 17.3799H55.5013L55.6113 18.8999H57.6012V6.53994H54.9613V16.4699C54.6812 16.9599 54.0312 17.3199 53.4212 17.3199C52.6512 17.3199 52.4113 16.7099 52.4113 15.6899V6.53994H49.7812V15.8099C49.7812 17.8199 50.3613 19.0899 52.2713 19.0899Z"></path>
+    <path d="M62.8261 18.8999V4.14994H65.8661V2.09994H57.1761V4.14994H60.2161V18.8999H62.8261Z"></path>
+    <path d="M67.8728 19.0899C69.3328 19.0899 70.2428 18.4799 70.9928 17.3799H71.1028L71.2128 18.8999H73.2028V6.53994H70.5628V16.4699C70.2828 16.9599 69.6328 17.3199 69.0228 17.3199C68.2528 17.3199 68.0128 16.7099 68.0128 15.6899V6.53994H65.3828V15.8099C65.3828 17.8199 65.9628 19.0899 67.8728 19.0899Z"></path>
+    <path d="M80.6744 6.26994C79.3944 6.26994 78.4744 6.82994 77.8644 7.73994H77.7344C77.8144 6.53994 77.8744 5.51994 77.8744 4.70994V1.43994H75.3244L75.3144 12.1799L75.3244 18.8999H77.5444L77.7344 17.6999H77.8044C78.3944 18.5099 79.3044 19.0199 80.5144 19.0199C82.5244 19.0199 83.3844 17.2899 83.3844 13.6099V11.6999C83.3844 8.25994 82.9944 6.26994 80.6744 6.26994ZM80.7644 13.6099C80.7644 15.9099 80.4244 17.2799 79.3544 17.2799C78.8544 17.2799 78.1644 17.0399 77.8544 16.5899V9.23994C78.1244 8.53994 78.7244 8.02994 79.3944 8.02994C80.4744 8.02994 80.7644 9.33994 80.7644 11.7299V13.6099Z"></path>
+    <path d="M92.6517 11.4999C92.6517 8.51994 92.3517 6.30994 88.9217 6.30994C85.6917 6.30994 84.9717 8.45994 84.9717 11.6199V13.7899C84.9717 16.8699 85.6317 19.1099 88.8417 19.1099C91.3817 19.1099 92.6917 17.8399 92.5417 15.3799L90.2917 15.2599C90.2617 16.7799 89.9117 17.3999 88.9017 17.3999C87.6317 17.3999 87.5717 16.1899 87.5717 14.3899V13.5499H92.6517V11.4999ZM88.8617 7.96994C90.0817 7.96994 90.1717 9.11994 90.1717 11.0699V12.0799H87.5717V11.0699C87.5717 9.13994 87.6517 7.96994 88.8617 7.96994Z"></path>
+  </g>
+</svg></div>
   </div>
   <div class="hcenter">
     <form class="searchbox" id="searchForm">
@@ -1690,18 +1704,20 @@ async function getVideo(id, signal) {
     /* Worker API: /api/v1/videos/{videoid}（メタ情報 / 関連動画の追加ソース） */
     const wkP = wkVideo(id, signal).catch(() => null);
 
-    const omada = await omadaP;
+    /* 高速化: ストリームを持つソースが届いた時点で短い猶予後に確定（全ソースを待たない） */
+    const R = {};
+    const tag = (k, pr) => pr.then((x) => { R[k] = x; return x; });
+    const all = [tag("omada", omadaP), tag("inv", invP), tag("piped", pipedP), tag("yta", ytaP), tag("niv", nivP), tag("wkv", wkP)];
+    await new Promise((resolve) => {
+      let done = false, grace = null;
+      const fin = () => { if (!done) { done = true; resolve(); } };
+      [all[0], all[1], all[2]].forEach((pr) => pr.then((x) => { if (hasStreams(x) && !grace) grace = setTimeout(fin, 500); }));
+      Promise.all(all).then(fin);
+      setTimeout(fin, 10000);
+      if (signal) signal.addEventListener("abort", fin, { once: true });
+    });
     if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
-    const inv = await invP;
-    if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
-    const piped = await pipedP;
-    if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
-    const yta = await ytaP;
-    if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
-    const niv = await nivP;
-    if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
-    const wkv = await wkP;
-    if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
+    const { omada, inv, piped, yta, niv, wkv } = R;
     const v = hasStreams(omada) ? omada : (hasStreams(inv) ? inv : (hasStreams(piped) ? piped : (wkv || niv || omada || inv || piped || yta)));
     /* 指定の Worker API を動画詳細の主データとして使い、再生ストリームだけ既存経路を維持する */
     if (v && wkv) {
@@ -2613,11 +2629,58 @@ async function homeFeed(chip, signal) {
   return merged;
 }
 
+/* 検索履歴・視聴履歴・登録チャンネルがあるか */
+function hasPersonalData() {
+  return historyQueries(1).length > 0 || (S.history || []).length > 0 || (S.subs || []).length > 0;
+}
+/* HOME おすすめ: 検索履歴 + 視聴履歴(チャンネル/タイトル) + 登録チャンネルに基づく動画 */
+async function homeRecFeed(signal) {
+  const qs = historyQueries(4);
+  const seenQ = new Set(qs);
+  (S.history || []).slice(0, 6).forEach((h) => {
+    const k = String(h.author || "").trim();
+    if (k && !seenQ.has(k)) { seenQ.add(k); qs.push(k); }
+  });
+  (S.history || []).slice(0, 2).forEach((h) => {
+    const k = String(h.title || "").replace(/[【】\[\]()（）|｜#].*$/, "").trim().slice(0, 30);
+    if (k && !seenQ.has(k)) { seenQ.add(k); qs.push(k); }
+  });
+  const watched = new Set((S.history || []).slice(0, 50).map((h) => h.videoId));
+  const tasks = qs.slice(0, 8).map((q) => Promise.race([
+    searchVideos(q, 1, signal).catch((e) => { if (isAbort(e)) throw e; return []; }),
+    new Promise((r) => setTimeout(() => r([]), 10000)),
+  ]));
+  tasks.push(fetchSubsVideos(signal, 6).catch(() => []));
+  const lists = await Promise.all(tasks.map((t) => Promise.resolve(t).catch(() => [])));
+  if (signal && signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
+  const buckets = lists.map((l) => (l || []).filter((v) => {
+    if (v.type && v.type !== "video" && v.type !== "shortVideo") return false;
+    const id = vidOf(v); return id && !watched.has(id);
+  }));
+  /* 各ソースを交互に並べて偏りを防ぐ */
+  const out = [], seen = new Set();
+  for (let i = 0; buckets.some((b) => b.length > i); i++) {
+    buckets.forEach((b) => { const v = b[i]; if (!v) return; const id = vidOf(v); if (seen.has(id)) return; seen.add(id); v.videoId = id; out.push(v); });
+  }
+  if (!out.length) {
+    /* 履歴ベースで取れなかった場合でもエラーにせず、別経路で埋める */
+    const fb = buckets.flat().filter((v) => vidOf(v));
+    if (fb.length) return fb.slice(0, 60);
+    return homeFeed("すべて", signal);
+  }
+  return out.slice(0, 60);
+}
+
 async function pageHome() {
 
   setChips(HOME_CHIPS, homeChip, (c) => { homeChip = c; pageHome(); });
   const root = view();
     root.innerHTML = "";
+  if (homeChip === "すべて" && !hasPersonalData()) {
+    setChips(null);
+    root.innerHTML = '<div class="home-empty"><div class="he-card"><h2>まずは検索してみましょう</h2><p>動画を検索して、フィードを作成しましょう</p></div></div>';
+    return;
+  }
   const shortSec = el("section", "home-section home-ghost");
   shortSec.innerHTML = '<div class="home-section-head"><h2><svg viewBox="0 0 24 24" style="width:24px;height:24px;vertical-align:-5px;margin-right:6px"><path fill="var(--brand)" d="M17.77 10.32l-1.2-.5L18 9.06a4.13 4.13 0 001.56-5.6 4.1 4.1 0 00-5.55-1.62L5.1 6.5A4.13 4.13 0 003.5 12a4.1 4.1 0 002.28 1.96l.94.4-1.44.75a4.13 4.13 0 00-1.56 5.6 4.1 4.1 0 005.55 1.62l8.91-4.66a4.13 4.13 0 001.6-5.5 4.1 4.1 0 00-2.01-1.85z"/><path fill="#fff" d="M10 8.4l6.06 3.6L10 15.6V8.4z"/></svg>ショート</h2></div>';
   const shortShelf = el("div", "shelf-scroll");
@@ -2628,55 +2691,8 @@ async function pageHome() {
   root.appendChild(shortSec);
   attachShelfArrows(shortShelf);
 
-    const recSec = el("section", "home-section home-ghost");
-  recSec.innerHTML = '<div class="home-section-head"><h2>おすすめ</h2></div>';
-  const recShelf = el("div", "home-video-shelf");
-  recShelf.setAttribute("aria-busy", "true");
-  recShelf.appendChild(ghostHomeVideos(5, false));
-  recSec.appendChild(recShelf);
-
-  root.appendChild(recSec);
-  attachShelfArrows(recShelf);
-
-  /* おすすめ棚: 右端まで横スクロールしたら追加読み込み */
-  const recSeen = new Set();
-  const recQueries = (homeChip !== "すべて" ? [homeChip] : []).concat(historyQueries(6));
-  if (!recQueries.length) recQueries.push("おすすめ", "人気の動画", "急上昇");
-  let recLoading = false, recPage = 0, recExhausted = false;
-  const loadMoreRecs = async () => {
-    if (recLoading || recExhausted || !recShelf.isConnected) return;
-    if (!recShelf.children.length || recShelf.getAttribute("aria-busy")) return;
-    recLoading = true;
-    recPage++;
-    const q = recQueries[(recPage - 1) % recQueries.length];
-    const page = Math.ceil(recPage / recQueries.length) + 1;
-    try {
-      const res = await Promise.allSettled([
-        api("search", "/api/v1/search?q=" + encodeURIComponent(q) + "&type=video&region=" + RG() + "&page=" + page, { signal }),
-        ytaSearch(q + (page > 1 ? " " + page : ""), signal),
-      ]);
-      let added = 0;
-      res.forEach((r) => {
-        if (r.status !== "fulfilled") return;
-        (Array.isArray(r.value) ? r.value : (r.value && r.value.items) || []).forEach((v) => {
-          if (v.type && v.type !== "video" && v.type !== "shortVideo") return;
-          const id = vidOf(v);
-          if (!id || recSeen.has(id)) return;
-          recSeen.add(id); v.videoId = id;
-          recShelf.appendChild(videoCard(v, null, recShelf.children.length));
-          added++;
-        });
-      });
-      if (!added && page > 3) recExhausted = true;
-    } catch (_) {}
-    recLoading = false;
-  };
-  recShelf.addEventListener("scroll", () => {
-    if (recShelf.scrollLeft + recShelf.clientWidth > recShelf.scrollWidth - 600) loadMoreRecs();
-  }, { passive: true });
-
     const normalSec = el("section", "home-section home-ghost");
-  normalSec.innerHTML = '<div class="home-section-head"><h2>動画</h2></div>';
+  normalSec.innerHTML = '<div class="home-section-head"><h2>おすすめ</h2></div>';
   const normalBox = el("div", "grid");
   normalBox.setAttribute("aria-busy", "true");
   normalBox.appendChild(ghostHomeVideos(8, true));
@@ -2687,7 +2703,7 @@ async function pageHome() {
   const signal = nav.abort.signal;
   /* Short棚: 登録チャンネル + 検索履歴のショート（無ければトレンド） */
   const shortsPromise = homeShortsFeed(signal).catch(() => []);
-  const trendPromise = homeFeed(homeChip, signal);
+  const trendPromise = homeChip === "すべて" ? homeRecFeed(signal) : homeFeed(homeChip, signal);
 
   /* Short棚: 右端まで横スクロールしたら追加読み込み */
   const shSeen = new Set();
@@ -2738,35 +2754,7 @@ async function pageHome() {
   }).catch(() => shortSec.remove());
 
   /* 前回取得したフィードを即座に描画し、裏で最新に更新（SWR） */
-  const feedKey = "feed_" + homeChip;
-  /* おすすめ: 登録チャンネルの新着 + 検索履歴に基づく動画 */
-  let recFilled = false;
-  const paintRec = (list) => {
-    if (signal.aborted || !list || !list.length) return false;
-    recShelf.innerHTML = "";
-    recShelf.removeAttribute("aria-busy");
-    list.slice(0, 12).forEach((v, i) => { const id = vidOf(v); if (id) recSeen.add(id); recShelf.appendChild(videoCard(v, null, i)); });
-    recFilled = recShelf.children.length > 0;
-    return recFilled;
-  };
-  /* おすすめ棚: 登録チャンネルの動画のみ */
-  fetchSubsVideos(signal, 6).catch(() => []).then(async (subsV) => {
-    if (signal.aborted) return;
-    if (paintRec(subsV)) return;
-    /* 登録チャンネルが無い / 取れない場合でも、おすすめは必ず表示する */
-    let fb = [];
-    try { fb = await fetchHistoryRecs(signal, 20); } catch (_) {}
-    if (signal.aborted) return;
-    if (!fb.length) { try { fb = await homeFeed(homeChip, signal); } catch (_) {} }
-    if (signal.aborted) return;
-    if (!paintRec(fb)) {
-      recShelf.innerHTML = "";
-      recShelf.removeAttribute("aria-busy");
-      recFilled = true;
-      recExhausted = true;
-      recShelf.appendChild(el("div", "empty", "おすすめを取得できませんでした"));
-    }
-  });
+  const feedKey = "feed2_" + homeChip;
   const paintFeed = (data) => {
     if (signal.aborted) return;
     const videos = (data || []).filter((v) => (v.type ? v.type === "video" || v.type === "shortVideo" : true) && (v.videoId || v.id));
@@ -3192,7 +3180,7 @@ async function pageWatch(id, startAt) {
   if (nav.abort.signal.aborted) return;
 
   /* siatube の情報でタイトル / 概要欄 / 関連動画 / 各種メタを上書き */
-  const sia = await siaPromise;
+  const sia = await Promise.race([siaPromise, new Promise((r) => setTimeout(() => r(null), 800))]);
   if (sia && !nav.abort.signal.aborted) {
     if (sia.title) v.title = sia.title;
     if (sia.description) v.description = sia.description;
